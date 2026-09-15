@@ -35,6 +35,7 @@ import {
   Download,
 } from "lucide-react";
 import HospitalTicketModal from "@/components/modals/hospital-ticket-modal";
+import { useLocation } from "react-router-dom";
 import { TicketsTableSkeleton } from "@/components/skeletons/TicketsTableSkeleton";
 import httpService from "@/services/httpService";
 import { useSedes } from "@/hooks/useRoles";
@@ -74,7 +75,9 @@ export default function GestionTickets() {
   const [totalItems, setTotalItems] = useState(0);
 
   // Filtros adicionales para gestión
-  const [estadoFilter, setEstadoFilter] = useState("all");
+  // El inicio puede llegar con un estado preseleccionado (p. ej. «Esperando cierre»).
+  const location = useLocation();
+  const [estadoFilter, setEstadoFilter] = useState(() => location.state?.estado ?? "all");
   const [sedeFilter, setSedeFilter] = useState("all");
   const [reportanteFilter, setReportanteFilter] = useState("all");
 

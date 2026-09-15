@@ -16377,6 +16377,130 @@ Route::get('v1/ordenes/estadisticas-por-tipo', function(Request $request) {
 });
 
 // Estadísticas de CALIBRACIONES para el dashboard (total y por tipo de equipo). Filtro por sede opcional.
+// Resumen para la pantalla de inicio: todos los conteos en una sola llamada.
+// alcance=gestion -> tickets con el MISMO filtro por empresa que "Gestión de tickets"
+//                    (ver v1/gestion-tickets), para que el número coincida con lo que
+//                    el usuario ve al hacer clic.
+// alcance=propio  -> solo los tickets que reportó el usuario (como "Mis tickets").
+// Sin usuario autenticado solo se devuelven los conteos de catálogo.
+Route::get('v1/inicio/resumen', function (Request $request) {
+    try {
+        $authUser = auth('sanctum')->user();
+        $alcance = $request->get('alcance') === 'propio' ? 'propio' : 'gestion';
+
+        // Mismo alcance por empresa que v1/gestion-tickets.
+        $subprocesos = null; // null = sin restricción
+        if ($authUser) {
+            $idEmpresa = DB::table('usuarios')->where('id', $authUser->id)->value('id_empresa');
+            if (in_array($idEmpresa, [3, 6])) {
+                $subprocesos = [1];
+            } elseif (in_array($idEmpresa, [4, 7])) {
+                $subprocesos = [2, 3];
+            } elseif ($idEmpresa == 27) {
+                $subprocesos = [1, 2];
+            }
+        }
+
+        $tickets = null;
+        $calibracionesVencidas = null;
+
+        if ($authUser) {
+            $base = DB::table('ordenes');
+            if ($alcance === 'propio') {
+                $base->where('reportante_id', $authUser->id);
+            } elseif ($subprocesos !== null) {
+                $base->whereIn('subproceso_id', $subprocesos);
+            }
+
+            $porEstado = (clone $base)
+                ->whereIn('estado_id', [1, 2, 3, 5])
+                ->selectRaw('estado_id, COUNT(*) as n')
+                ->groupBy('estado_id')
+                ->pluck('n', 'estado_id');
+
+            $tickets = [
+                'abiertos'         => (int) ($porEstado[1] ?? 0),
+                'asignados'        => (int) ($porEstado[2] ?? 0),
+                'diagnosticados'   => (int) ($porEstado[3] ?? 0),
+                'esperando_cierre' => (int) ($porEstado[5] ?? 0),
+            ];
+
+            // Equipos que requieren calibración y no tienen ningún registro de
+            // calibración en los últimos 12 meses. (Los métodos vencidas() y
+            // equiposRequierenCalibracion() del controlador usan columnas que no
+            // existen en la tabla real, por eso se calcula aquí.)
+            if ($alcance === 'gestion') {
+                $tipos = null; // subproceso 1 = biomédico (tipo 1), 2 = industrial (tipo 2)
+                if ($subprocesos !== null) {
+                    $tipos = array_values(array_intersect([1, 2], $subprocesos));
+                }
+
+                if ($tipos !== null && count($tipos) === 0) {
+                    $calibracionesVencidas = 0;
+                } else {
+                    $desde = now()->subMonths(12)->toDateString();
+                    // Fuera del inventario operativo: mismos estados que excluye el
+                    // indicador de guías rápidas (baja, pendiente de baja, por entregar,
+                    // fin de comodato...). El flujo de baja deja status=1, así que
+                    // status<>0 no basta para descartarlos.
+                    $estadosExcluidos = \Illuminate\Support\Facades\Schema::hasTable('estados_excluidos_guias')
+                        ? DB::table('estados_excluidos_guias')->pluck('estadoequipo_id')->all()
+                        : [5, 6, 9, 10, 14, 16];
+
+                    $q = DB::table('equipos as e')
+                        ->where('e.status', '<>', 0)
+                        ->whereNotIn('e.estadoequipo_id', $estadosExcluidos)
+                        ->whereIn('e.calibracion', ['SI', '1'])
+                        ->whereNotExists(function ($s) use ($desde) {
+                            $s->select(DB::raw(1))->from('calibracion as c')
+                                ->whereColumn('c.equipo_id', 'e.id')
+                                ->where('c.status', 1)
+                                ->where('c.fecha_calibracion', '>=', $desde);
+                        })
+                        ->whereNotExists(function ($s) use ($desde) {
+                            $s->select(DB::raw(1))->from('calibracion_ind as ci')
+                                ->whereColumn('ci.equipo_id', 'e.id')
+                                ->where('ci.status', 1)
+                                ->where('ci.fecha_calibracion', '>=', $desde);
+                        });
+                    if ($tipos !== null) {
+                        $q->whereIn('e.tipo_id', $tipos);
+                    }
+                    $calibracionesVencidas = (int) $q->count();
+                }
+            }
+        }
+
+        $equipos = DB::table('equipos')
+            ->where('status', '<>', 0)
+            ->whereIn('tipo_id', [1, 2])
+            ->selectRaw('tipo_id, COUNT(*) as n')
+            ->groupBy('tipo_id')
+            ->pluck('n', 'tipo_id');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'alcance'                => $authUser ? $alcance : null,
+                'tickets'                => $tickets,
+                'calibraciones_vencidas' => $calibracionesVencidas,
+                'equipos' => [
+                    'biomedicos'   => (int) ($equipos[1] ?? 0),
+                    'industriales' => (int) ($equipos[2] ?? 0),
+                ],
+                'manuales' => (int) DB::table('manuales')->where('status', 1)->count(),
+                'guias'    => (int) DB::table('guias_rapidas')->where('estado', 1)->count(),
+            ],
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error en v1/inicio/resumen: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'No se pudo cargar el resumen del inicio.',
+        ], 500);
+    }
+});
+
 Route::get('v1/calibraciones/estadisticas', function(Request $request) {
     try {
         $sedeId = $request->get('sede_id');
