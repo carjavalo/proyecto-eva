@@ -14,6 +14,10 @@ import {
   BookOpen,
   GraduationCap,
   ChevronRight,
+  Send,
+  UserCheck,
+  Wrench,
+  PenLine,
 } from "lucide-react";
 import httpService from "@/services/httpService";
 import { useAuth } from "../contexts/AuthContext";
@@ -80,6 +84,16 @@ const LINEAS_TICKET = [
   { tipo: "infraestructura", label: "Infraestructura", Icon: Building2 },
 ];
 
+// Lo que ven los usuarios que no son administradores en lugar de los conteos de
+// tickets. El paso 4 es el que más se olvida: sin la firma de quien recibe
+// (obligatoria al enviar a cierre) el ticket no puede cerrarse.
+const PASOS_REPORTE = [
+  { titulo: "Reportas la falla", texto: "Eliges la línea y describes qué le pasa al equipo o al espacio.", Icon: Send },
+  { titulo: "Se asigna un técnico", texto: "El área de mantenimiento recibe el ticket y lo asigna.", Icon: UserCheck },
+  { titulo: "Diagnóstico y reparación", texto: "El técnico revisa el equipo y registra lo que hizo.", Icon: Wrench },
+  { titulo: "Firmas el recibido", texto: "Al terminar, confirmas con tu firma que quedó funcionando. Sin esa firma el ticket no puede cerrarse.", Icon: PenLine, tuyo: true },
+];
+
 // Color del número según su estado; en cero se muestra neutro.
 const TONO = {
   warn: "bg-[#FEF3C7] text-[#92400E]",
@@ -124,10 +138,13 @@ export default function EvaDashboard() {
     [user, permissionsLoading, permissionService]
   );
 
+  // Las estadísticas de tickets solo las ven los administradores (roles 1 y 2),
+  // el mismo criterio con el que el menú muestra «Dashboard».
+  const esAdmin = !!user && Number(user.rol_id) <= 2;
   const esGestion = puede("/ordenes/gestion-tickets");
   const tieneMisTickets = puede("/ordenes/mis-tickets");
   const puedeReportar = esGestion || tieneMisTickets;
-  const alcance = esGestion ? "gestion" : "propio";
+  const alcance = esAdmin ? "gestion" : "propio";
 
   // ── Guías rápidas ─────────────────────────────────────────
   useEffect(() => {
@@ -174,11 +191,10 @@ export default function EvaDashboard() {
   }, [alcance]);
 
   useEffect(() => {
-    // Se espera a los permisos para no pedir el resumen con el alcance equivocado.
+    // El alcance depende solo del rol (disponible de inmediato), no de los permisos.
     if (!user) return;
-    if (permissionsLoading && user.rol_id > 2) return;
     cargarResumen();
-  }, [user, permissionsLoading, cargarResumen]);
+  }, [user, cargarResumen]);
 
   // ── Filtro y apertura de guías ────────────────────────────
   const terminos = useMemo(() => sinAcentos(busqueda).trim().split(/\s+/).filter(Boolean), [busqueda]);
@@ -237,20 +253,15 @@ export default function EvaDashboard() {
 
   const rutaEquipos = puede("/equipos/biomedicos") ? "/equipos/biomedicos" : puede("/equipos/industriales") ? "/equipos/industriales" : null;
 
-  const filasAtencion = esGestion
+  const filasAtencion = esAdmin
     ? [
         { key: "cierre", valor: t?.esperando_cierre, base: "warn", titulo: "Esperando confirmación de cierre", sub: "Enviados a cierre sin confirmar", cta: "Revisar", ir: () => navigate("/ordenes/gestion-tickets", { state: { estado: "5" } }) },
         { key: "abiertos", valor: t?.abiertos, base: "crit", titulo: "Abiertos sin responsable", sub: "Tickets nuevos por asignar", cta: "Asignar", ir: () => navigate("/ordenes/gestion-tickets", { state: { estado: "1" } }) },
         { key: "asignados", valor: t?.asignados, base: "info", titulo: "Asignados en curso", sub: "Con técnico asignado", cta: "Ver", ir: () => navigate("/ordenes/gestion-tickets", { state: { estado: "2" } }) },
+        { key: "diag", valor: t?.diagnosticados, base: "info", titulo: "Diagnosticados", sub: "Pendientes de reparación", cta: "Ver", ir: () => navigate("/ordenes/gestion-tickets", { state: { estado: "3" } }) },
         ...(rutaEquipos
           ? [{ key: "calib", valor: resumen?.calibraciones_vencidas, base: "warn", titulo: "Calibración vencida", sub: "Sin registro en los últimos 12 meses", cta: "Ver", ir: () => navigate(rutaEquipos) }]
           : []),
-      ]
-    : tieneMisTickets
-    ? [
-        { key: "abiertos", valor: t?.abiertos, base: "info", titulo: "Abiertos", sub: "Aún sin técnico asignado", cta: "Ver", ir: () => navigate("/ordenes/mis-tickets") },
-        { key: "asignados", valor: t?.asignados, base: "info", titulo: "En atención", sub: "Un técnico ya lo tiene asignado", cta: "Ver", ir: () => navigate("/ordenes/mis-tickets") },
-        { key: "cierre", valor: t?.esperando_cierre, base: "warn", titulo: "Esperando cierre", sub: "Pendientes de confirmar el cierre", cta: "Ver", ir: () => navigate("/ordenes/mis-tickets") },
       ]
     : [];
 
@@ -459,9 +470,9 @@ export default function EvaDashboard() {
               <section aria-labelledby="inicio-atencion" className="rounded-[18px] border border-[#E2E7EE] bg-white">
                 <div className="flex items-baseline justify-between gap-2.5 px-4 pb-0.5 pt-3">
                   <h2 id="inicio-atencion" className="text-sm font-bold">
-                    {esGestion ? "Requiere atención" : "Tus tickets"}
+                    Requiere atención
                   </h2>
-                  <span className="text-[11.5px] text-[#8792A7]">{esGestion ? "Según tu rol" : "Los que reportaste"}</span>
+                  <span className="text-[11.5px] text-[#667085]">Según tu rol</span>
                 </div>
                 <ul className="grid gap-px px-2 pb-2 pt-1">
                   {filasAtencion.map((f) => (
@@ -489,6 +500,61 @@ export default function EvaDashboard() {
                     </li>
                   ))}
                 </ul>
+              </section>
+            )}
+
+            {/* Usuarios que no son administradores: paso a paso en lugar de conteos */}
+            {user && !esAdmin && (
+              <section aria-labelledby="inicio-flujo" className="rounded-[18px] border border-[#E2E7EE] bg-white px-4 pb-3.5 pt-3">
+                <div className="flex items-baseline justify-between gap-2.5">
+                  <h2 id="inicio-flujo" className="text-sm font-bold">
+                    Así avanza tu reporte
+                  </h2>
+                  <span className="text-[11.5px] text-[#667085]">De la falla al cierre</span>
+                </div>
+                <ol className="mt-2.5 grid">
+                  {PASOS_REPORTE.map(({ titulo, texto, Icon, tuyo }, i) => (
+                    <li key={titulo} className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-3 pb-3.5 last:pb-0">
+                      {i < PASOS_REPORTE.length - 1 && (
+                        <span aria-hidden="true" className="absolute bottom-0.5 left-[19px] top-10 w-0.5 rounded bg-[#E2E7EE]" />
+                      )}
+                      <span
+                        className={`relative grid h-10 w-10 place-items-center rounded-xl ${
+                          tuyo ? "bg-[#2A377E] text-white" : "bg-[#EEF3FF] text-[#2A377E]"
+                        }`}
+                      >
+                        <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
+                        <span className="absolute -right-1.5 -top-1.5 grid h-[18px] w-[18px] place-items-center rounded-full border border-[#D5DCE6] bg-white text-[10.5px] font-bold leading-none text-[#475569]">
+                          {i + 1}
+                        </span>
+                      </span>
+                      <div className="min-w-0">
+                        <p className="mt-0.5 text-[13.5px] font-semibold leading-snug">
+                          {titulo}
+                          {tuyo && (
+                            <span className="ml-1.5 rounded-full bg-[#E8EDFB] px-[7px] py-px align-[1px] text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#2A377E]">
+                              Tu parte
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[12.5px] text-[#5E6A82]">{texto}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                {tieneMisTickets && (
+                  <div className="mt-3 flex items-center justify-between gap-2.5 border-t border-[#E2E7EE] pt-2.5 text-xs text-[#5E6A82]">
+                    <span>¿Ya reportaste algo?</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/ordenes/mis-tickets")}
+                      className="flex items-center gap-0.5 rounded font-semibold text-[#2563EB] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+                    >
+                      Ver mis tickets
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </section>
             )}
 
