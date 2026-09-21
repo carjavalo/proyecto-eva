@@ -46,9 +46,16 @@ import SearchableSelect from "../ui/searchable-select";
 export default function HospitalTicketModal({
   isOpen,
   onClose,
-  ticketType = "biomedico",
+  ticketType: initialTicketType = "biomedico",
   onSuccess,
 }) {
+
+  const [ticketType, setTicketType] = useState(initialTicketType);
+  useEffect(() => {
+    if (isOpen) setTicketType(initialTicketType);
+  }, [isOpen, initialTicketType]);
+
+
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
   const [isEquipmentSearchModalOpen, setIsEquipmentSearchModalOpen] =
@@ -104,6 +111,10 @@ export default function HospitalTicketModal({
 
   const [formData, setFormData] = useState(initialFormData);
 
+
+
+
+
   // Función para resetear el formulario completamente
   const resetForm = () => {
     setFormData(initialFormData);
@@ -113,6 +124,18 @@ export default function HospitalTicketModal({
     setSubcategoriasDisponibles([]);
     setCurrentSigner("");
   };
+
+  const changeTicketType = (type) => {
+  setTicketType(type);
+  // Limpia lo que depende del tipo para no enviar datos del tipo anterior
+  setFormData((prev) => ({
+    ...prev,
+    tipoArreglo: type === "biomedico" ? "BIOMEDICO" : initialFormData.tipoArreglo,
+    tipoMantenimientoId: "",
+    subcategoriaMantenimientoId: "",
+  }));
+  if (type !== "biomedico" && tiposMantenimiento.length === 0) fetchTiposMantenimiento();
+};
 
   // Funciones para cargar datos de APIs
   const loadFilterOptions = async () => {
@@ -203,7 +226,7 @@ export default function HospitalTicketModal({
         fetchEmpresas();
       }
 
-      if (ticketType === "industrial" || ticketType === "infraestructura") {
+      if (initialTicketType === "industrial" || initialTicketType === "infraestructura") {
         fetchTiposMantenimiento();
       }
 
@@ -212,7 +235,7 @@ export default function HospitalTicketModal({
       setFormData(prev => ({
         ...prev,
         fecha: today,
-        ...(ticketType === "biomedico" ? { tipoArreglo: "BIOMEDICO" } : {})
+        ...(initialTicketType === "biomedico" ? { tipoArreglo: "BIOMEDICO" } : {})
       }));
 
       // Autocompletar datos del usuario actual
@@ -275,6 +298,8 @@ export default function HospitalTicketModal({
     const empresa = empresas.find((e) => e.id.toString() === id);
     return empresa ? empresa.nombre : id;
   };
+
+  
 
   const handleInputChange = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -636,6 +661,23 @@ export default function HospitalTicketModal({
                 </div>
               )}
             </div>
+
+
+            {ticketType == 'infraestructura' && (
+              <div className="bg-yellow-50 border border-dotted border-3 border-yellow-300 rounded-lg p-4 mb-4">
+                {/* Contenido específico para infraestructura */}
+               <p><h3 className="font-semibold">TENER EN CUENTA</h3></p>
+               <p className="text-xs text-gray-500 mt-1">Asegúrese de no reportar equipos por medio de este formulario. Si desea reportar un equipo, utilice el formulario correspondiente de orden industrial o biomedica.</p>
+               <div className="mt-2 space-x-1">
+               <button type="button" onClick={() => changeTicketType("biomedico")} className="px-4 py-1.5 cursor-pointer bg-blue-100  text-blue-700 font-semibold rounded-l-lg">
+                Reportar Biomédico
+                </button>
+                <button type="button" onClick={() => changeTicketType("industrial")} className="px-4 py-1.5 cursor-pointer bg-green-100 text-green-700 font-semibold rounded-r-lg">
+                Reportar Industrial
+                </button>
+               </div>
+              </div>
+            )}
 
             {/* Información General */}
             <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm mb-4">

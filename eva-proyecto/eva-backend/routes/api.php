@@ -6267,6 +6267,23 @@ Route::get('v1/gestion-tickets/export-excel', function(Request $request) {
         
         \Log::info('🔄 [EXPORT] Iniciando exportación de tickets a Excel (Optimizado)');
 
+        // Filtro por TIPO DE EQUIPO (ordenes.subproceso_id), mismo formato que
+        // v1/gestion-tickets: CSV con 1, 2 y/o 3. Tokens inválidos se ignoran;
+        // vacío o 'all' = sin filtro.
+        $tipoEquipoExport = $request->get('tipo_equipo', '');
+        $tipoEquipoExport = is_scalar($tipoEquipoExport) ? trim((string) $tipoEquipoExport) : '';
+        $tiposSolicitados = [];
+        if ($tipoEquipoExport !== '' && $tipoEquipoExport !== 'all') {
+            foreach (explode(',', $tipoEquipoExport) as $token) {
+                $token = trim($token);
+                if (in_array($token, ['1', '2', '3'], true) && !in_array((int) $token, $tiposSolicitados, true)) {
+                    $tiposSolicitados[] = (int) $token;
+                }
+            }
+        }
+
+        sort($tiposSolicitados);
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Tickets');
@@ -6357,6 +6374,11 @@ Route::get('v1/gestion-tickets/export-excel', function(Request $request) {
         $sedeIdExport = $request->get('sede_id');
         if (!empty($sedeIdExport) && $sedeIdExport !== 'all') {
             $tickets->where(DB::raw('COALESCE(equipos.sede_id, servicios.sede_id)'), $sedeIdExport);
+        }
+
+        // Filtro por tipo de equipo (calculado arriba)
+        if (!empty($tiposSolicitados) && $tiposSolicitados !== [1, 2, 3]) {
+            $tickets->whereIn('ordenes.subproceso_id', $tiposSolicitados);
         }
 
         $tickets = $tickets->orderBy('ordenes.id', 'desc')->get();
@@ -16497,6 +16519,342 @@ Route::get('v1/inicio/resumen', function (Request $request) {
         return response()->json([
             'success' => false,
             'message' => 'No se pudo cargar el resumen del inicio.',
+        ], 500);
+    }
+});
+
+// Resumen del dashboard de administración: tickets creados, cumplimiento del
+// mantenimiento preventivo y calibraciones de un periodo, en una sola llamada.
+// Periodo: anio (2000..2100, por defecto el actual) o desde+hasta (Y-m-d, máx. 3 años).
+// lineas = CSV de ordenes.subproceso_id (1 Biomédico, 2 Industrial, 3 Infraestructura).
+// Solo administradores (rol 1 y 2); muestra todas las líneas sin importar la empresa del usuario.
+// Sede efectiva en todas las consultas: COALESCE(equipos.sede_id, servicios.sede_id).
+Route::get('v1/dashboard/resumen', function (Request $request) {
+    try {
+        $authUser = auth('sanctum')->user();
+        if (!$authUser) {
+            return response()->json(['success' => false, 'message' => 'No autenticado'], 401);
+        }
+        if (!in_array((int) $authUser->rol_id, [1, 2], true)) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores'], 403);
+        }
+
+        $error422 = fn ($mensaje) => response()->json(['success' => false, 'message' => $mensaje], 422);
+        // Parámetro escalar recortado ('' si no viene o si llega como arreglo).
+        $param = function ($clave) use ($request) {
+            $valor = $request->get($clave);
+            return is_scalar($valor) ? trim((string) $valor) : '';
+        };
+        $hoy = now()->startOfDay(); // zona horaria de la app (America/Bogota)
+
+        // ---- Periodo: desde/hasta tienen prioridad sobre anio ----
+        $anio = null;
+        $desdeParam = $param('desde');
+        $hastaParam = $param('hasta');
+        if ($desdeParam !== '' || $hastaParam !== '') {
+            if ($desdeParam === '' || $hastaParam === '') {
+                return $error422('Debe enviar las fechas desde y hasta juntas.');
+            }
+            $parseFecha = function ($texto) {
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $texto, $m)
+                    || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])
+                    || (int) $m[1] < 2000 || (int) $m[1] > 2100) {
+                    return null;
+                }
+                return Carbon::create((int) $m[1], (int) $m[2], (int) $m[3])->startOfDay();
+            };
+            $desde = $parseFecha($desdeParam);
+            $hasta = $parseFecha($hastaParam);
+            if (!$desde || !$hasta) {
+                return $error422('Las fechas deben tener el formato AAAA-MM-DD (años 2000 a 2100).');
+            }
+            if ($hasta->lt($desde)) {
+                return $error422('La fecha hasta debe ser igual o posterior a la fecha desde.');
+            }
+            if ($hasta->gt($desde->copy()->addYearsNoOverflow(3))) {
+                return $error422('El rango de fechas no puede superar 3 años.');
+            }
+        } else {
+            $anioParam = $param('anio');
+            $anio = $anioParam === ''
+                ? (int) $hoy->year
+                : filter_var($anioParam, FILTER_VALIDATE_INT, ['options' => ['min_range' => 2000, 'max_range' => 2100]]);
+            if ($anio === false) {
+                return $error422('El año debe ser un número entre 2000 y 2100.');
+            }
+            $desde = Carbon::create($anio, 1, 1)->startOfDay();
+            $hasta = Carbon::create($anio, 12, 31)->startOfDay();
+        }
+
+        // ---- Sede (vacío o 'all' = todas) ----
+        $sedeId = null;
+        $sedeParam = $param('sede_id');
+        if ($sedeParam !== '' && $sedeParam !== 'all') {
+            $sedeId = filter_var($sedeParam, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($sedeId === false) {
+                return $error422('La sede enviada no es válida.');
+            }
+        }
+
+        // ---- Líneas solicitadas (tokens inválidos se ignoran) ----
+        $lineasParam = $param('lineas');
+        if ($lineasParam === '' || $lineasParam === 'all') {
+            $lineasParam = '1,2,3';
+        }
+        $lineas = [];
+        foreach (explode(',', $lineasParam) as $token) {
+            $token = trim($token);
+            if (in_array($token, ['1', '2', '3'], true)) {
+                $lineas[] = (int) $token;
+            }
+        }
+        if (empty($lineas)) {
+            return $error422('Las líneas deben ser 1 (Biomédico), 2 (Industrial) y/o 3 (Infraestructura).');
+        }
+
+        // Vista global de administración: sin alcance por empresa (como el dashboard
+        // anterior y el export de tickets). Se conserva lineas_permitidas en la respuesta.
+        $permitidas = [1, 2, 3];
+        $efectivas = array_values(array_intersect($permitidas, $lineas)); // ordenadas asc, sin repetidos
+
+        // ---- Días y meses del periodo ----
+        $hastaEfectivo = $hasta->lt($hoy) ? $hasta->copy() : $hoy->copy();
+        $hayPeriodo = $desde->lte($hastaEfectivo); // false si el periodo empieza en el futuro
+        $dias = $hayPeriodo ? (int) round(abs($desde->diffInDays($hastaEfectivo))) + 1 : 0;
+        // Rango sargable [desde, hasta_efectivo + 1 día)
+        $ini = $desde->toDateString();
+        $finExcl = $hastaEfectivo->copy()->addDay()->toDateString();
+
+        // Todos los meses del periodo SOLICITADO (los futuros quedan en cero).
+        $meses = [];
+        for ($m = $desde->copy()->startOfMonth(); $m->lte($hasta); $m->addMonth()) {
+            $meses[] = $m->format('Y-m');
+        }
+
+        // Años con tickets para el selector del frontend (+ el año actual).
+        $aniosDisponibles = DB::table('ordenes')
+            ->where('fecha_inicio', '>=', '2000-01-01')
+            ->where('fecha_inicio', '<', '2101-01-01')
+            ->selectRaw('DISTINCT YEAR(fecha_inicio) AS y')
+            ->orderByDesc('y')
+            ->pluck('y')
+            ->map(fn ($y) => (int) $y)
+            ->all();
+        if (!in_array((int) $hoy->year, $aniosDisponibles, true)) {
+            $aniosDisponibles[] = (int) $hoy->year;
+            rsort($aniosDisponibles);
+        }
+
+        // Línea -> tipo de equipo (1 -> tipo 1, 2 -> tipo 2; infraestructura no tiene equipos).
+        // Solo se filtra por tipo_id si queda exactamente uno; con ambos no se filtra
+        // para conservar los registros con tipo_id NULL.
+        $tiposEquipo = array_values(array_intersect([1, 2], $efectivas));
+        $aplicaEquipos = count($tiposEquipo) > 0;
+        $tipoFiltro = count($tiposEquipo) === 1 ? $tiposEquipo[0] : null;
+
+        // ---- Tickets (ordenes) creados en el periodo ----
+        $ticketsMesLinea = []; // ['2024-01' => [subproceso_id => n]]
+        $ticketsEstado = [];
+        if ($hayPeriodo && !empty($efectivas)) {
+            $baseTickets = DB::table('ordenes')
+                ->where('ordenes.fecha_inicio', '>=', $ini)
+                ->where('ordenes.fecha_inicio', '<', $finExcl)
+                ->whereIn('ordenes.subproceso_id', $efectivas);
+            if ($sedeId !== null) {
+                $baseTickets->leftJoin('equipos', 'ordenes.equipo_id', '=', 'equipos.id')
+                    ->leftJoin('servicios', 'ordenes.servicio_id', '=', 'servicios.id')
+                    ->whereRaw('COALESCE(equipos.sede_id, servicios.sede_id) = ?', [$sedeId]);
+            }
+
+            $filas = (clone $baseTickets)
+                ->selectRaw("DATE_FORMAT(ordenes.fecha_inicio, '%Y-%m') AS mes, ordenes.subproceso_id AS linea, COUNT(*) AS n")
+                ->groupBy('mes', 'linea')
+                ->get();
+            foreach ($filas as $f) {
+                $ticketsMesLinea[$f->mes][(int) $f->linea] = (int) $f->n;
+            }
+
+            $ticketsEstado = (clone $baseTickets)
+                ->selectRaw('ordenes.estado_id AS estado, COUNT(*) AS n')
+                ->groupBy('estado')
+                ->pluck('n', 'estado')
+                ->all();
+        }
+
+        $clavesLinea = [1 => 'biomedico', 2 => 'industrial', 3 => 'infraestructura'];
+        $ticketsPorLinea = ['biomedico' => 0, 'industrial' => 0, 'infraestructura' => 0];
+        $ticketsPorMes = [];
+        foreach ($meses as $mes) {
+            $fila = ['mes' => $mes, 'biomedico' => 0, 'industrial' => 0, 'infraestructura' => 0, 'total' => 0];
+            foreach ($ticketsMesLinea[$mes] ?? [] as $linea => $n) {
+                if (isset($clavesLinea[$linea])) {
+                    $fila[$clavesLinea[$linea]] += $n;
+                    $fila['total'] += $n;
+                    $ticketsPorLinea[$clavesLinea[$linea]] += $n;
+                }
+            }
+            $ticketsPorMes[] = $fila;
+        }
+        $creados = array_sum($ticketsPorLinea);
+        $porEstado = [
+            'abierto'          => (int) ($ticketsEstado[1] ?? 0),
+            'asignado'         => (int) ($ticketsEstado[2] ?? 0),
+            'diagnosticado'    => (int) ($ticketsEstado[3] ?? 0),
+            'cerrado'          => (int) ($ticketsEstado[4] ?? 0),
+            'esperando_cierre' => (int) ($ticketsEstado[5] ?? 0),
+        ];
+
+        // ---- Cumplimiento del preventivo ----
+        // Una programación es (plan, mes) por cada columna mes1/mes2/mes3 con valor
+        // ('', NULL y '0' = sin mes; CAST AS SIGNED porque UNSIGNED falla con '0').
+        // Cuenta si su mes se cruza con [desde, hasta_efectivo] y está cumplida si el
+        // equipo tiene un registro en mantenimiento dentro de ese mes calendario.
+        $preventivoMes = []; // ['2024-01' => [programadas, cumplidas]]
+        if ($hayPeriodo && $aplicaEquipos) {
+            $unirEquipo = $tipoFiltro !== null || $sedeId !== null;
+            $partes = [];
+            $bindings = [];
+            foreach (['mes1', 'mes2', 'mes3'] as $columna) {
+                $sql = "SELECT pm.equipo_id, pm.anio, CAST(pm.{$columna} AS SIGNED) AS mes FROM planes_mantenimientos pm";
+                if ($unirEquipo) {
+                    $sql .= ' JOIN equipos e ON e.id = pm.equipo_id';
+                    if ($sedeId !== null) {
+                        $sql .= ' LEFT JOIN servicios s ON s.id = e.servicio_id';
+                    }
+                }
+                $sql .= " WHERE pm.anio BETWEEN ? AND ? AND NULLIF(TRIM(pm.{$columna}), '') IS NOT NULL";
+                array_push($bindings, (int) $desde->year, (int) $hastaEfectivo->year);
+                if ($tipoFiltro !== null) {
+                    $sql .= ' AND e.tipo_id = ?';
+                    $bindings[] = $tipoFiltro;
+                }
+                if ($sedeId !== null) {
+                    $sql .= ' AND COALESCE(e.sede_id, s.sede_id) = ?';
+                    $bindings[] = $sedeId;
+                }
+                $partes[] = $sql;
+            }
+            array_push($bindings, (int) $desde->format('Ym'), (int) $hastaEfectivo->format('Ym'));
+
+            $filas = DB::select(
+                'SELECT p.anio, p.mes, COUNT(*) AS programadas,
+                        SUM(EXISTS (SELECT 1 FROM mantenimiento m
+                                    WHERE m.equipo_id = p.equipo_id
+                                      AND m.fecha_mantenimiento >= MAKEDATE(p.anio, 1) + INTERVAL (p.mes - 1) MONTH
+                                      AND m.fecha_mantenimiento <  MAKEDATE(p.anio, 1) + INTERVAL p.mes MONTH)) AS cumplidas
+                   FROM (' . implode(' UNION ALL ', $partes) . ') p
+                  WHERE p.mes BETWEEN 1 AND 12
+                    AND p.anio * 100 + p.mes BETWEEN ? AND ?
+                  GROUP BY p.anio, p.mes',
+                $bindings
+            );
+            foreach ($filas as $f) {
+                $preventivoMes[sprintf('%04d-%02d', $f->anio, $f->mes)] = [(int) $f->programadas, (int) $f->cumplidas];
+            }
+        }
+
+        $programadas = 0;
+        $cumplidas = 0;
+        $preventivoPorMes = [];
+        foreach ($meses as $mes) {
+            [$p, $c] = $preventivoMes[$mes] ?? [0, 0];
+            $programadas += $p;
+            $cumplidas += $c;
+            $preventivoPorMes[] = ['mes' => $mes, 'programadas' => $p, 'cumplidas' => $c];
+        }
+
+        // ---- Calibraciones (tabla calibracion, status = 1) ----
+        $calibracionMesTipo = []; // ['2024-01' => ['bio' => n, 'ind' => n, 'total' => n]]
+        $equiposCalibrados = 0;
+        if ($hayPeriodo && $aplicaEquipos) {
+            $baseCal = DB::table('calibracion')
+                ->leftJoin('equipos', 'calibracion.equipo_id', '=', 'equipos.id')
+                ->where('calibracion.status', 1)
+                ->where('calibracion.fecha_calibracion', '>=', $ini)
+                ->where('calibracion.fecha_calibracion', '<', $finExcl);
+            if ($tipoFiltro !== null) {
+                $baseCal->where('equipos.tipo_id', $tipoFiltro);
+            }
+            if ($sedeId !== null) {
+                $baseCal->leftJoin('servicios', 'equipos.servicio_id', '=', 'servicios.id')
+                    ->whereRaw('COALESCE(equipos.sede_id, servicios.sede_id) = ?', [$sedeId]);
+            }
+
+            $filas = (clone $baseCal)
+                ->selectRaw("DATE_FORMAT(calibracion.fecha_calibracion, '%Y-%m') AS mes, equipos.tipo_id AS tipo, COUNT(*) AS n")
+                ->groupBy('mes', 'tipo')
+                ->get();
+            foreach ($filas as $f) {
+                $calibracionMesTipo[$f->mes] = $calibracionMesTipo[$f->mes] ?? ['bio' => 0, 'ind' => 0, 'total' => 0];
+                if ((int) $f->tipo === 1) {
+                    $calibracionMesTipo[$f->mes]['bio'] += (int) $f->n;
+                } elseif ((int) $f->tipo === 2) {
+                    $calibracionMesTipo[$f->mes]['ind'] += (int) $f->n;
+                }
+                $calibracionMesTipo[$f->mes]['total'] += (int) $f->n;
+            }
+
+            $equiposCalibrados = (int) (clone $baseCal)->distinct()->count('calibracion.equipo_id');
+        }
+
+        $calTotal = 0;
+        $calBio = 0;
+        $calInd = 0;
+        $calibracionesPorMes = [];
+        foreach ($meses as $mes) {
+            $c = $calibracionMesTipo[$mes] ?? ['bio' => 0, 'ind' => 0, 'total' => 0];
+            $calTotal += $c['total'];
+            $calBio += $c['bio'];
+            $calInd += $c['ind'];
+            $calibracionesPorMes[] = ['mes' => $mes, 'biomedico' => $c['bio'], 'industrial' => $c['ind'], 'total' => $c['total']];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'periodo' => [
+                    'desde'          => $desde->toDateString(),
+                    'hasta'          => $hasta->toDateString(),
+                    'hasta_efectivo' => $hastaEfectivo->toDateString(),
+                    'dias'           => $dias,
+                    'anio'           => $anio,
+                ],
+                'sede_id'           => $sedeId,
+                'lineas'            => $efectivas,
+                'lineas_permitidas' => $permitidas,
+                'anios_disponibles' => $aniosDisponibles,
+                'meses'             => $meses,
+                'tickets' => [
+                    'creados'      => $creados,
+                    'promedio_dia' => $dias > 0 ? round($creados / $dias, 2) : 0.0,
+                    'por_linea'    => $ticketsPorLinea,
+                    'por_mes'      => $ticketsPorMes,
+                    'por_estado'   => $porEstado,
+                    'sin_cerrar'   => $porEstado['abierto'] + $porEstado['asignado']
+                                    + $porEstado['diagnosticado'] + $porEstado['esperando_cierre'],
+                ],
+                'preventivo' => [
+                    'aplica'      => $aplicaEquipos,
+                    'programadas' => $programadas,
+                    'cumplidas'   => $cumplidas,
+                    'porcentaje'  => $programadas > 0 ? round($cumplidas * 100 / $programadas, 1) : null,
+                    'por_mes'     => $preventivoPorMes,
+                ],
+                'calibraciones' => [
+                    'aplica'     => $aplicaEquipos,
+                    'total'      => $calTotal,
+                    'biomedico'  => $calBio,
+                    'industrial' => $calInd,
+                    'equipos'    => $equiposCalibrados,
+                    'por_mes'    => $calibracionesPorMes,
+                ],
+            ],
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error en v1/dashboard/resumen: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'No se pudo cargar el resumen del dashboard.',
         ], 500);
     }
 });

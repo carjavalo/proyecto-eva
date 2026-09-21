@@ -13,7 +13,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp } from "lucide-react";
 
-export function RoundedPieChart({ chartData, chartConfig, title, description, badgeText, dataKey = "value", nameKey = "name" }) {
+export function RoundedPieChart({ chartData, chartConfig, title, description, badgeText, dataKey = "value", nameKey = "name", valueFormatter = (value) => value.toString() }) {
   return (
     <Card className="flex flex-col border-none shadow-none bg-transparent">
       <CardHeader className="items-center justify-center pb-4">
@@ -52,7 +52,7 @@ export function RoundedPieChart({ chartData, chartConfig, title, description, ba
                 fontSize={18}
                 fontWeight={700}
                 fill="#ffffff"
-                formatter={(value) => value.toString()} />
+                formatter={valueFormatter} />
             </Pie>
           </PieChart>
         </ChartContainer>
