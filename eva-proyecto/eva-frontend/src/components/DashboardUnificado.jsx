@@ -536,8 +536,8 @@ function Kpi({ titulo, valor, sub, alerta = false }) {
 function Cifra({ titulo, valor, color = "#1B2335", acento }) {
   return (
     <div
-      className="rounded-[14px] border border-[#E2E7EE] bg-[#FBFCFE] px-3.5 py-3"
-      style={acento ? { boxShadow: `inset 3px 0 0 ${acento}` } : undefined}
+      className={`rounded-[14px] border border-[#E2E7EE] bg-[#FBFCFE] px-3.5 py-3 ${acento ? "border-l-[3px]" : ""}`}
+      style={acento ? { borderLeftColor: acento } : undefined}
     >
       <p className="text-[12px] font-semibold text-[#5E6A82]">{titulo}</p>
       <p className="text-[30px] font-bold leading-tight tabular-nums" style={{ fontFamily: FONT_DISPLAY, color }}>
@@ -1428,7 +1428,7 @@ export default function DashboardUnificado() {
             {/* ── Barra de filtros (fija bajo la barra de navegación) ── */}
             <section
               aria-label="Filtros del dashboard"
-              className="sticky top-[4.5rem] z-30 grid gap-2 rounded-[14px] border border-[#E2E7EE] bg-white px-3 py-2.5 shadow-[0_10px_24px_-20px_rgba(15,23,42,0.5)]"
+              className="sticky top-[4.5rem] z-30 grid gap-2 rounded-[14px] border border-[#E2E7EE] bg-white px-3 py-2.5"
             >
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div role="group" aria-labelledby={idPeriodo} className="flex flex-wrap items-center gap-2">

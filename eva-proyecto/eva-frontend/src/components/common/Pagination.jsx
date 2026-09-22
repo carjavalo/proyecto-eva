@@ -94,7 +94,7 @@ const Pagination = ({
                     disabled={loading}
                     className={`h-8 min-w-[2rem] ${
                       currentPage === i 
-                        ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600 shadow-sm font-bold" 
+                        ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600 font-bold" 
                         : "hover:bg-blue-50 border-gray-300"
                     }`}
                   >

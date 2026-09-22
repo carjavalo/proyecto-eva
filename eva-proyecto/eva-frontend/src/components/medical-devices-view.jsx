@@ -553,7 +553,7 @@ export function MedicalDevicesView() {
   if (isBasicUser) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg border border-red-200 p-8 max-w-md text-center">
+        <div className="bg-white rounded-xl border border-red-200 p-8 max-w-md text-center">
           <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-800 mb-2">ACCESO BLOQUEADO</h2>
           <Badge className="bg-red-100 text-red-800 mb-4 hover:bg-red-200">USUARIO BÁSICO</Badge>
@@ -605,7 +605,7 @@ export function MedicalDevicesView() {
         </PermissionWrapper>
       </div>
       {/* Main Content Card */}
-      <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+      <Card className="shadow-none border border-slate-200 bg-white">
         {/* Enhanced Filters Section */}
         <div className="bg-gradient-to-r from-teal-50 to-[#1d293d]/5 border-b border-teal-100 p-2 sm:p-3 md:p-4 lg:p-6">
           <div className="space-y-2 sm:space-y-3 md:space-y-4">
@@ -1643,7 +1643,7 @@ export function MedicalDevicesView() {
         <div className="md:hidden space-y-3 p-2 sm:p-3">
           {loading ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <Card key={index} className="p-4">
+              <Card key={index} className="p-4 shadow-none">
                 <div className="space-y-3">
                   <Skeleton className="h-6 w-24" />
                   <Skeleton className="h-32 w-full rounded-lg" />
@@ -1667,7 +1667,7 @@ export function MedicalDevicesView() {
                 whileHover="hover"
                 onMouseEnter={() => prefetchEquipment(device.id)}
               >
-                <Card className="overflow-hidden border-l-4 border-l-teal-500">
+                <Card className="overflow-hidden border-l-4 border-l-teal-500 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     {/* ID y Nombre */}
                     <div className="space-y-2">
@@ -1817,7 +1817,7 @@ export function MedicalDevicesView() {
               </motion.div>
             ))
           ) : (
-            <Card className="p-8">
+            <Card className="p-8 shadow-none">
               <div className="text-center text-slate-500">
                 {error ? (
                   <div className="text-red-500">

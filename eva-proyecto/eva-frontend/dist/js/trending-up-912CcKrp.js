@@ -1,0 +1,1 @@
+import{c as e}from"./index-CczY1BEP.js";const o=[["path",{d:"m12 14 4-4",key:"9kzdfg"}],["path",{d:"M3.34 19a10 10 0 1 1 17.32 0",key:"19p75a"}]],n=e("gauge",o);const t=[["path",{d:"M16 7h6v6",key:"box55l"}],["path",{d:"m22 7-8.5 8.5-5-5L2 17",key:"1t1m79"}]],c=e("trending-up",t);export{n as G,c as T};

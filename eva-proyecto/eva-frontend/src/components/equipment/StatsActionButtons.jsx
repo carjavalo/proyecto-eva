@@ -53,7 +53,7 @@ export function StatsActionButtons({
   const isBasicUser = user && parseInt(user.rol_id) === 4;
 
   return (
-    <Card className="bg-slate-800 border-slate-700 shadow-lg flex-1">
+    <Card className="bg-slate-800 border-slate-700 shadow-none flex-1">
       <CardContent className="p-0.5 sm:p-1">
         <div className="flex gap-0.5">
           <Button

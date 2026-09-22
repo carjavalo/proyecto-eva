@@ -46,7 +46,7 @@ export const EquipmentIdBadge = memo(function EquipmentIdBadge({
         variant="outline"
         className={`
           equipment-id-badge font-mono font-bold border-2 transition-all duration-300 cursor-default
-          shadow-sm hover:shadow-md transform hover:scale-105
+          transform hover:scale-105
           ${sizeClasses[size]}
           ${variantClasses[variant]}
         `}
@@ -60,7 +60,7 @@ export const EquipmentIdBadge = memo(function EquipmentIdBadge({
           onClick={handleCopy}
           className={`
             equipment-action-button p-1.5 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95
-            shadow-sm hover:shadow-md backdrop-blur-sm
+            backdrop-blur-sm
             ${copied 
               ? "text-green-600 bg-green-50 hover:bg-green-100 border border-green-200" 
               : "text-gray-500 hover:text-gray-700 bg-white/80 hover:bg-white border border-gray-200 hover:border-gray-300"

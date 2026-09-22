@@ -441,7 +441,7 @@ function IndustrialDevices() {
   if (isBasicUser) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg border border-red-200 p-8 max-w-md text-center">
+        <div className="bg-white rounded-xl border border-red-200 p-8 max-w-md text-center">
           <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-800 mb-2">ACCESO BLOQUEADO</h2>
           <Badge className="bg-red-100 text-red-800 mb-4 hover:bg-red-200">USUARIO BÁSICO</Badge>
@@ -492,7 +492,7 @@ function IndustrialDevices() {
         </PermissionWrapper>
       </div>
       {/* Main Content Card */}
-      <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+      <Card className="shadow-none border border-slate-200 bg-white">
         {/* Enhanced Filters Section */}
         <EquipmentFiltersSection
           filters={filters}
@@ -1330,7 +1330,7 @@ function IndustrialDevices() {
         <div className="md:hidden space-y-3 p-2 sm:p-3">
           {loading ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <Card key={index} className="p-4">
+              <Card key={index} className="p-4 shadow-none">
                 <div className="space-y-3">
                   <Skeleton className="h-6 w-24" />
                   <Skeleton className="h-32 w-full rounded-lg" />
@@ -1345,7 +1345,7 @@ function IndustrialDevices() {
               </Card>
             ))
           ) : hasError ? (
-            <Card className="p-8">
+            <Card className="p-8 shadow-none">
               <div className="text-center text-red-600">
                 <p className="font-semibold">Error al cargar equipos</p>
                 <p className="text-sm mt-2">{error}</p>
@@ -1355,7 +1355,7 @@ function IndustrialDevices() {
               </div>
             </Card>
           ) : isEmpty ? (
-            <Card className="p-8">
+            <Card className="p-8 shadow-none">
               <div className="text-center text-slate-500">
                 <p className="font-semibold">No hay equipos disponibles</p>
                 <p className="text-sm mt-2">No se encontraron equipos industriales registrados</p>
@@ -1378,7 +1378,7 @@ function IndustrialDevices() {
                 transition={{ duration: 0.3 }}
                 onMouseEnter={() => prefetchEquipment(equipment.id)}
               >
-                <Card className="overflow-hidden border-l-4 border-l-orange-500">
+                <Card className="overflow-hidden border-l-4 border-l-orange-500 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     {/* ID y Nombre */}
                     <div className="space-y-2">

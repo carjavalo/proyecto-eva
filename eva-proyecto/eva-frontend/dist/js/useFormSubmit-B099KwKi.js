@@ -1,0 +1,1 @@
+import{r as o}from"./index-CczY1BEP.js";const s=t=>{const r=o.useCallback(e=>{e.key==="Enter"&&e.target.tagName!=="TEXTAREA"&&(e.preventDefault(),t(e))},[t]),a=o.useCallback(e=>{e.preventDefault(),t(e)},[t]);return{handleKeyDown:r,handleSubmit:a,formProps:{onSubmit:a,onKeyDown:r}}};export{s as u};
