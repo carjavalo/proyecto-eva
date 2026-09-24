@@ -1410,6 +1410,11 @@ class CorrectivoGeneralController extends Controller
                 ? DB::raw("COALESCE(cg.created_at, cg.fecha_mantenimiento)")
                 : DB::raw("COALESCE(cg.fecha_inicio, cg.created_at)");
 
+            // Fecha para el SELECT: correctivos_generales_ind no tiene la columna fecha_inicio
+            $fechaSelect = $tipo === 'industrial'
+                ? "COALESCE(cg.created_at, cg.fecha_mantenimiento)"
+                : "COALESCE(cg.fecha_inicio, cg.created_at, cg.fecha_mantenimiento)";
+
             $qC = DB::table("{$tablaCorrectivos} as cg")
                 ->join('equipos as e', function ($join) use ($tipoId) {
                     // INNER JOIN: solo correctivos cuyo equipo exista y tenga el tipo correcto
@@ -1421,9 +1426,9 @@ class CorrectivoGeneralController extends Controller
                 ->leftJoin('estadoequipos as ee',     'e.estadoequipo_id',   '=', 'ee.id')
                 ->select(array_merge([
                     'cg.id',
-                    DB::raw("COALESCE(cg.fecha_inicio, cg.created_at, cg.fecha_mantenimiento) as created_at"),
+                    DB::raw("{$fechaSelect} as created_at"),
                     'cg.equipo_id',
-                    DB::raw("COALESCE(cg.fecha_inicio, cg.created_at, cg.fecha_mantenimiento) as fecha_inicio"),
+                    DB::raw("{$fechaSelect} as fecha_inicio"),
                     'sede.name as sede_nombre',
                     DB::raw("'{$tipoLabel}' as tipo"),
                     DB::raw("{$subqResp} as responsable_nombre"),
@@ -1454,8 +1459,10 @@ class CorrectivoGeneralController extends Controller
                     DB::raw("NULL as repuesto_pendiente"),
                 ], $selectEspecificos));
 
-            // JOIN codificacion_cierres solo para biomédico (la tabla _ind no tiene cierre_id)
-            if ($tipo === 'biomedico') {
+            // JOIN codificacion_cierres siempre que NO sea industrial (la tabla _ind no tiene
+            // cierre_id). Debe coincidir con el criterio de $selectEspecificos: sin el join,
+            // una llamada sin ?tipo= pide cc.name sobre una tabla no unida y revienta el SQL.
+            if ($tipo !== 'industrial') {
                 $qC->leftJoin('codificacion_cierres as cc', 'cg.cierre_id', '=', 'cc.id');
             }
 
