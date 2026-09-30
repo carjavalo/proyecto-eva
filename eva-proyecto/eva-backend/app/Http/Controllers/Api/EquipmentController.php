@@ -2222,6 +2222,8 @@ class EquipmentController extends ApiController
                 \Log::info("Movimientos para equipo {$id}: {$countMovimientos} registros encontrados");
                 
                 $movimientos = DB::table('cambios_ubicaciones')
+                    ->leftJoin('servicios as servicios_origen', 'cambios_ubicaciones.servicio_origen_id', '=', 'servicios_origen.id')
+                    ->leftJoin('servicios as servicios_destino', 'cambios_ubicaciones.servicio_destino_id', '=', 'servicios_destino.id')
                     ->leftJoin('areas as areas_origen', 'cambios_ubicaciones.area_origen_id', '=', 'areas_origen.id')
                     ->leftJoin('areas as areas_destino', 'cambios_ubicaciones.area_destino_id', '=', 'areas_destino.id')
                     ->leftJoin('sedes as sedes_origen', 'cambios_ubicaciones.sede_origen_id', '=', 'sedes_origen.id')
@@ -2231,12 +2233,16 @@ class EquipmentController extends ApiController
                     ->select([
                         'cambios_ubicaciones.id',
                         'cambios_ubicaciones.equipo_id',
+                        'cambios_ubicaciones.servicio_origen_id',
+                        'cambios_ubicaciones.servicio_destino_id',
                         'cambios_ubicaciones.area_origen_id',
                         'cambios_ubicaciones.area_destino_id',
                         'cambios_ubicaciones.sede_origen_id',
                         'cambios_ubicaciones.sede_destino_id',
                         'cambios_ubicaciones.usuario_id',
                         'cambios_ubicaciones.created_at as fecha',
+                        'servicios_origen.name as servicio_origen_nombre',
+                        'servicios_destino.name as servicio_destino_nombre',
                         'areas_origen.name as area_origen_nombre',
                         'areas_destino.name as area_destino_nombre',
                         'sedes_origen.name as sede_origen_nombre',
@@ -2503,38 +2509,9 @@ class EquipmentController extends ApiController
                 $equipoData['tickets'] = [];
             }
 
-            // 14. Cambios de Hoja de Vida
+            // 14. Cambios de Hoja de Vida (incluye los traslados de servicio, área y sede)
             try {
-                $cambiosHdv = DB::table('cambios_hdv')
-                    ->leftJoin('usuarios', 'cambios_hdv.usuario_id', '=', 'usuarios.id')
-                    ->where('cambios_hdv.equipo_id', $id)
-                    ->select([
-                        'cambios_hdv.id',
-                        'cambios_hdv.equipo_id',
-                        'cambios_hdv.descripcion',
-                        'cambios_hdv.usuario_id',
-                        'cambios_hdv.created_at',
-                        'usuarios.nombre as usuario_nombre',
-                        'usuarios.apellido as usuario_apellido',
-                        'usuarios.username as usuario_username',
-                        DB::raw("CONCAT(COALESCE(usuarios.nombre, 'Sistema'), ' ', COALESCE(usuarios.apellido, '')) as responsable_nombre")
-                    ])
-                    ->orderBy('cambios_hdv.created_at', 'desc')
-                    ->get()
-                    ->map(function ($cambio) {
-                        return [
-                            'id' => $cambio->id,
-                            'descripcion' => $cambio->descripcion,
-                            'usuario_id' => $cambio->usuario_id,
-                            'usuario_nombre' => $cambio->usuario_nombre ?? 'Sistema',
-                            'usuario_apellido' => $cambio->usuario_apellido ?? '',
-                            'usuario_username' => $cambio->usuario_username ?? '',
-                            'responsable_nombre' => $cambio->responsable_nombre ?? 'Sistema',
-                            'fecha' => $cambio->created_at,
-                            'fecha_formateada' => \Carbon\Carbon::parse($cambio->created_at)->format('d/m/Y H:i:s')
-                        ];
-                    });
-                $equipoData['cambios_hdv'] = $cambiosHdv;
+                $equipoData['cambios_hdv'] = $this->historialDeCambios($id);
             } catch (\Exception $e) {
                 \Log::warning('Error obteniendo cambios HDV: ' . $e->getMessage());
                 $equipoData['cambios_hdv'] = [];
@@ -3432,44 +3409,13 @@ class EquipmentController extends ApiController
                 ], 404);
             }
 
-            // Obtener cambios de hoja de vida del equipo con información del usuario
-            $cambiosHdv = DB::table('cambios_hdv')
-                ->leftJoin('usuarios', 'cambios_hdv.usuario_id', '=', 'usuarios.id')
-                ->where('cambios_hdv.equipo_id', $id)
-                ->select([
-                    'cambios_hdv.id',
-                    'cambios_hdv.equipo_id',
-                    'cambios_hdv.descripcion',
-                    'cambios_hdv.usuario_id',
-                    'cambios_hdv.created_at',
-                    'usuarios.nombre as usuario_nombre',
-                    'usuarios.apellido as usuario_apellido',
-                    'usuarios.username as usuario_username',
-                    DB::raw("CONCAT(COALESCE(usuarios.nombre, 'Sistema'), ' ', COALESCE(usuarios.apellido, '')) as responsable_nombre")
-                ])
-                ->orderBy('cambios_hdv.created_at', 'desc')
-                ->get();
-
-            // Formatear los datos para el frontend
-            $historialFormateado = $cambiosHdv->map(function ($cambio) {
-                return [
-                    'id' => $cambio->id,
-                    'descripcion' => $cambio->descripcion,
-                    'usuario_id' => $cambio->usuario_id,
-                    'usuario_nombre' => $cambio->usuario_nombre ?? 'Sistema',
-                    'usuario_apellido' => $cambio->usuario_apellido ?? '',
-                    'usuario_username' => $cambio->usuario_username ?? '',
-                    'responsable_nombre' => $cambio->responsable_nombre ?? 'Sistema',
-                    'fecha' => $cambio->created_at,
-                    'fecha_formateada' => \Carbon\Carbon::parse($cambio->created_at)->format('d/m/Y H:i:s')
-                ];
-            });
+            $historialFormateado = $this->historialDeCambios($id);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Historial de cambios obtenido exitosamente',
                 'data' => $historialFormateado,
-                'total' => $historialFormateado->count()
+                'total' => count($historialFormateado)
             ]);
 
         } catch (\Exception $e) {
@@ -3480,5 +3426,94 @@ class EquipmentController extends ApiController
                 'data' => []
             ], 500);
         }
+    }
+
+    /**
+     * Historial de la hoja de vida: los cambios registrados en `cambios_hdv` más los
+     * traslados guardados en `cambios_ubicaciones` (servicio, área y sede), en una sola
+     * línea de tiempo ordenada de lo más reciente a lo más antiguo.
+     */
+    private function historialDeCambios($id): array
+    {
+        $formatear = function ($fila, string $prefijo, string $descripcion) {
+            return [
+                'id' => $prefijo . $fila->id,
+                'descripcion' => $descripcion,
+                'usuario_id' => $fila->usuario_id,
+                'usuario_nombre' => $fila->usuario_nombre ?? 'Sistema',
+                'usuario_apellido' => $fila->usuario_apellido ?? '',
+                'usuario_username' => $fila->usuario_username ?? '',
+                'responsable_nombre' => trim((string) ($fila->responsable_nombre ?? '')) ?: 'Sistema',
+                'fecha' => $fila->created_at,
+                'fecha_formateada' => $fila->created_at
+                    ? \Carbon\Carbon::parse($fila->created_at)->format('d/m/Y H:i:s')
+                    : 'Sin fecha',
+            ];
+        };
+
+        $datosUsuario = [
+            'usuarios.nombre as usuario_nombre',
+            'usuarios.apellido as usuario_apellido',
+            'usuarios.username as usuario_username',
+            DB::raw("CONCAT(COALESCE(usuarios.nombre, 'Sistema'), ' ', COALESCE(usuarios.apellido, '')) as responsable_nombre"),
+        ];
+
+        $cambios = DB::table('cambios_hdv')
+            ->leftJoin('usuarios', 'cambios_hdv.usuario_id', '=', 'usuarios.id')
+            ->where('cambios_hdv.equipo_id', $id)
+            ->select(array_merge([
+                'cambios_hdv.id',
+                'cambios_hdv.descripcion',
+                'cambios_hdv.usuario_id',
+                'cambios_hdv.created_at',
+            ], $datosUsuario))
+            ->get()
+            ->map(fn ($fila) => $formatear($fila, 'hdv-', $fila->descripcion))
+            ->all();
+
+        $traslados = DB::table('cambios_ubicaciones as cu')
+            ->leftJoin('usuarios', 'cu.usuario_id', '=', 'usuarios.id')
+            ->leftJoin('servicios as so', 'so.id', '=', 'cu.servicio_origen_id')
+            ->leftJoin('servicios as sd', 'sd.id', '=', 'cu.servicio_destino_id')
+            ->leftJoin('areas as ao', 'ao.id', '=', 'cu.area_origen_id')
+            ->leftJoin('areas as ad', 'ad.id', '=', 'cu.area_destino_id')
+            ->leftJoin('sedes as seo', 'seo.id', '=', 'cu.sede_origen_id')
+            ->leftJoin('sedes as sed', 'sed.id', '=', 'cu.sede_destino_id')
+            ->where('cu.equipo_id', $id)
+            ->select(array_merge([
+                'cu.id',
+                'cu.usuario_id',
+                'cu.created_at',
+                'cu.servicio_origen_id',
+                'cu.servicio_destino_id',
+                'cu.area_origen_id',
+                'cu.area_destino_id',
+                'cu.sede_origen_id',
+                'cu.sede_destino_id',
+                'so.name as servicio_origen',
+                'sd.name as servicio_destino',
+                'ao.name as area_origen',
+                'ad.name as area_destino',
+                'seo.name as sede_origen',
+                'sed.name as sede_destino',
+            ], $datosUsuario))
+            ->get()
+            ->map(function ($fila) use ($formatear) {
+                $texto = \App\Support\HistorialEquipo::textoTraslado($fila);
+
+                // Filas antiguas que no describen ningún movimiento real: no se muestran
+                return $texto === '' ? null : $formatear($fila, 'ubi-', $texto);
+            })
+            ->filter()
+            ->all();
+
+        $historial = array_merge($cambios, $traslados);
+        // Lo más reciente primero; ante la misma fecha, desempata el id para que el orden no varíe
+        usort($historial, function ($a, $b) {
+            return strcmp((string) $b['fecha'], (string) $a['fecha'])
+                ?: strcmp((string) $b['id'], (string) $a['id']);
+        });
+
+        return $historial;
     }
 }

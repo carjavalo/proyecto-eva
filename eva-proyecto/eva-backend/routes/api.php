@@ -11126,6 +11126,9 @@ Route::post('v1/test/create-equipment-with-checkboxes', function (Request $reque
 
 // Equipment update route without any middleware (for development/testing)
 Route::put('v1/equipos/{id}/update-no-auth', function (Request $request, $id) {
+    // Fuera de la transacción: el guard de Sanctum escribe en personal_access_tokens al resolver el usuario
+    $usuarioHistorial = optional(auth('sanctum')->user())->id;
+
     try {
         DB::beginTransaction();
 
@@ -11137,15 +11140,44 @@ Route::put('v1/equipos/{id}/update-no-auth', function (Request $request, $id) {
             ], 404);
         }
 
+        // Mismos campos que v1/equipos/{id}/update-with-image: el formulario es el mismo,
+        // así que guardar debe hacer lo mismo se cambie o no la imagen.
         $updateData = $request->only([
             'name', 'code', 'serial', 'marca', 'modelo', 'descripcion',
             'servicio_id', 'sede_id', 'area_id', 'propietario_id', 'estadoequipo_id',
             'fuente_id', 'tecnologia_id', 'frecuencia_id', 'cbiomedica_id',
-            'criesgo_id', 'tadquisicion_id', 'tipo_id', 'costo', 'vida_util',
+            'criesgo_id', 'tadquisicion_id', 'tipo_id', 'disponibilidad_id',
+            'costo', 'vida_util', 'garantia',
             'localizacion_actual', 'verificacion_inventario', 'calibracion',
             'repuesto_pendiente', 'movilidad', 'propiedad', 'evaluacion_desempenio',
-            'periodicidad', 'manual_id', 'guia_id', 'invima_id', 'orden_compra_id'
+            'periodicidad', 'manual_id', 'guia_id', 'invima_id', 'orden_compra_id',
+            'invima', 'accesorios', 'activo_comodato', 'observacion', 'codigo_antiguo',
+            'v1', 'v2', 'v3',
+            'fecha_fabricacion', 'fecha_instalacion', 'fecha_inicio_operacion',
+            'fecha_acta_recibo', 'fecha_vencimiento_garantia', 'fecha_recepcion_almacen',
+            'fecha_ad', 'otros'
         ]);
+
+        // Normalizar campos de fecha: '0000-00-00', '', null o inválidos -> null
+        $dateFields = [
+            'fecha_ad', 'fecha_instalacion', 'fecha_fabricacion',
+            'fecha_inicio_operacion', 'fecha_acta_recibo',
+            'fecha_vencimiento_garantia', 'fecha_recepcion_almacen'
+        ];
+        foreach ($dateFields as $df) {
+            if (array_key_exists($df, $updateData)) {
+                $v = $updateData[$df];
+                if (empty($v) || $v === '0000-00-00' || (is_string($v) && str_starts_with($v, '0000'))) {
+                    $updateData[$df] = null;
+                } else {
+                    try {
+                        $updateData[$df] = \Carbon\Carbon::parse($v)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $updateData[$df] = null;
+                    }
+                }
+            }
+        }
 
         // Normalizar sede_id: '', '0', 0 -> null (sede opcional)
         if (array_key_exists('sede_id', $updateData)) {
@@ -11187,48 +11219,13 @@ Route::put('v1/equipos/{id}/update-no-auth', function (Request $request, $id) {
 
         $updateData['fecha_cambio'] = now();
 
-        // ✅ GUARDAR HISTORIAL DE CAMBIOS DE UBICACIÓN (área/sede)
-        $areaChanged = $request->has('area_id') && (string)$request->area_id !== (string)($equipo->area_id ?? '');
-        $sedeChanged = $request->has('sede_id') && (string)$request->sede_id !== (string)($equipo->sede_id ?? '');
-        
-        // Si cambió área o sede, registrar en historial
-        if ($areaChanged || $sedeChanged) {
-            try {
-                $sedeOrigenId = $equipo->sede_id ? (int)$equipo->sede_id : 0;
-                $sedeDestinoId = $request->input('sede_id') ? (int)$request->input('sede_id') : $sedeOrigenId;
-                
-                DB::table('cambios_ubicaciones')->insert([
-                    'equipo_id' => (int)$id,
-                    'area_origen_id' => (int)($equipo->area_id ?? 0),
-                    'area_destino_id' => (int)($request->input('area_id', $equipo->area_id ?? 0)),
-                    'sede_origen_id' => $sedeOrigenId,
-                    'sede_destino_id' => $sedeDestinoId,
-                    'usuario_id' => null,
-                    'created_at' => now()
-                ]);
-                
-                \Log::info('📍 HISTORIAL - Cambio de ubicación registrado:', [
-                    'equipo_id' => $id,
-                    'area_changed' => $areaChanged,
-                    'sede_changed' => $sedeChanged,
-                    'area_origen' => $equipo->area_id,
-                    'area_destino' => $request->input('area_id'),
-                    'sede_origen' => $equipo->sede_id,
-                    'sede_destino' => $request->input('sede_id')
-                ]);
-            } catch (\Exception $historialError) {
-                \Log::error('❌ Error guardando historial de ubicación:', [
-                    'error' => $historialError->getMessage(),
-                    'equipo_id' => $id
-                ]);
-                // No fallar la actualización del equipo si falla el historial
-            }
-        }
-
         $result = DB::table('equipos')->where('id', $id)->update($updateData);
 
         if ($result) {
             $updatedEquipo = DB::table('equipos')->where('id', $id)->first();
+
+            // Historial de la hoja de vida: traslados (servicio/área/sede) y demás campos editados
+            \App\Support\HistorialEquipo::registrar((int) $id, $equipo, $updatedEquipo, $usuarioHistorial);
 
             DB::commit();
 
@@ -11326,6 +11323,9 @@ Route::put('v1/equipos/{id}/migrar-tipo', function (Request $request, $id) {
 
 // Equipment update route with image support (no auth for development/testing)
 Route::match(['put', 'post'], 'v1/equipos/{id}/update-with-image', function (Request $request, $id) {
+    // Fuera de la transacción: el guard de Sanctum escribe en personal_access_tokens al resolver el usuario
+    $usuarioHistorial = optional(auth('sanctum')->user())->id;
+
     try {
         DB::beginTransaction();
 
@@ -11430,51 +11430,13 @@ Route::match(['put', 'post'], 'v1/equipos/{id}/update-with-image', function (Req
 
         $updateData['fecha_cambio'] = now();
 
-        // ✅ GUARDAR HISTORIAL DE CAMBIOS DE UBICACIÓN (área)
-        $areaChanged = $request->has('area_id') && $request->area_id != $equipo->area_id;
-        
-        // Si cambió área, registrar en historial
-        if ($areaChanged) {
-            try {
-                // Obtener sede del servicio actual del equipo
-                $sedeActual = null;
-                if ($equipo->servicio_id) {
-                    $servicio = DB::table('servicios')->where('id', $equipo->servicio_id)->first();
-                    $sedeActual = $servicio->sede_id ?? null;
-                }
-                $sedeOrigenId = $sedeActual ? (int)$sedeActual : 0;
-                $sedeDestinoId = $sedeOrigenId; // La sede no cambia directamente en equipos
-                
-                DB::table('cambios_ubicaciones')->insert([
-                    'equipo_id' => (int)$id,
-                    'area_origen_id' => (int)($equipo->area_id ?? 0),
-                    'area_destino_id' => (int)($request->input('area_id', $equipo->area_id ?? 0)),
-                    'sede_origen_id' => $sedeOrigenId,
-                    'sede_destino_id' => $sedeDestinoId,
-                    'usuario_id' => null,
-                    'created_at' => now()
-                ]);
-                
-                \Log::info('📍 HISTORIAL - Cambio de ubicación registrado (con imagen):', [
-                    'equipo_id' => $id,
-                    'area_changed' => $areaChanged,
-                    'area_origen' => $equipo->area_id,
-                    'area_destino' => $request->input('area_id'),
-                    'sede' => $sedeOrigenId
-                ]);
-            } catch (\Exception $historialError) {
-                \Log::error('❌ Error guardando historial de ubicación (con imagen):', [
-                    'error' => $historialError->getMessage(),
-                    'equipo_id' => $id
-                ]);
-                // No fallar la actualización del equipo si falla el historial
-            }
-        }
-
         $result = DB::table('equipos')->where('id', $id)->update($updateData);
 
         if ($result) {
             $updatedEquipo = DB::table('equipos')->where('id', $id)->first();
+
+            // Historial de la hoja de vida: traslados (servicio/área/sede) y demás campos editados
+            \App\Support\HistorialEquipo::registrar((int) $id, $equipo, $updatedEquipo, $usuarioHistorial);
 
             DB::commit();
 

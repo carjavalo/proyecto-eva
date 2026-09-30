@@ -148,6 +148,10 @@ export function MovimientosModal({ open, onOpenChange, equipmentId, equipmentNam
                             <span>{movimiento.sede_origen_nombre || 'N/A'}</span>
                           </div>
                           <div>
+                            <span className="font-medium text-slate-600">Servicio:</span>{' '}
+                            <span>{movimiento.servicio_origen_nombre || 'N/A'}</span>
+                          </div>
+                          <div>
                             <span className="font-medium text-slate-600">Área:</span>{' '}
                             <span>{movimiento.area_origen_nombre || 'N/A'}</span>
                           </div>
@@ -169,6 +173,10 @@ export function MovimientosModal({ open, onOpenChange, equipmentId, equipmentNam
                           <div>
                             <span className="font-medium text-slate-600">Sede:</span>{' '}
                             <span>{movimiento.sede_destino_nombre || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-slate-600">Servicio:</span>{' '}
+                            <span>{movimiento.servicio_destino_nombre || 'N/A'}</span>
                           </div>
                           <div>
                             <span className="font-medium text-slate-600">Área:</span>{' '}
