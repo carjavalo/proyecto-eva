@@ -180,7 +180,7 @@ export default function MyTickets() {
               </div>
               <div className="text-left min-w-0">
                 <div className="font-semibold text-sm sm:text-base truncate">Equipos Industriales</div>
-                <div className="text-xs sm:text-sm text-orange-600 truncate">Producción y Manufactura</div>
+                <div className="text-xs sm:text-sm text-orange-600 truncate">De uso hospitalario</div>
               </div>
             </Button>
 
@@ -194,7 +194,7 @@ export default function MyTickets() {
               </div>
               <div className="text-left min-w-0">
                 <div className="font-semibold text-sm sm:text-base truncate">Infraestructura</div>
-                <div className="text-xs sm:text-sm text-green-600 truncate">Servicios y Movilidad</div>
+                <div className="text-xs sm:text-sm text-green-600 truncate">Hospitalaria</div>
               </div>
             </Button>
           </div>

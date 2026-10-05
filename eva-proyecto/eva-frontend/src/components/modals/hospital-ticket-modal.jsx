@@ -134,7 +134,7 @@ export default function HospitalTicketModal({
     tipoMantenimientoId: "",
     subcategoriaMantenimientoId: "",
   }));
-  if (type !== "biomedico" && tiposMantenimiento.length === 0) fetchTiposMantenimiento();
+  if (type !== "biomedico") fetchTiposMantenimiento(type);
 };
 
   // Funciones para cargar datos de APIs
@@ -196,11 +196,13 @@ export default function HospitalTicketModal({
     }
   };
 
-  const fetchTiposMantenimiento = async () => {
+  // Cada categoría se marca en su CRUD para industrial, para infraestructura o para ambas:
+  // aquí solo se piden las de la línea del ticket que se está creando.
+  const fetchTiposMantenimiento = async (linea) => {
     setLoadingMantenimiento(true);
     try {
-      console.log("🌐 [TICKETS] Cargando tipos de mantenimiento...");
-      const response = await httpService.get("/v1/tipos-mantenimiento");
+      console.log("🌐 [TICKETS] Cargando tipos de mantenimiento de:", linea);
+      const response = await httpService.get("/v1/tipos-mantenimiento", { params: { linea } });
       if (response.data?.success && response.data?.data) {
         console.log("✅ [TICKETS] Tipos de mantenimiento cargados:", response.data.data.length);
         setTiposMantenimiento(response.data.data);
@@ -227,7 +229,7 @@ export default function HospitalTicketModal({
       }
 
       if (initialTicketType === "industrial" || initialTicketType === "infraestructura") {
-        fetchTiposMantenimiento();
+        fetchTiposMantenimiento(initialTicketType);
       }
 
       // Autocompletar fecha actual y tipo de arreglo

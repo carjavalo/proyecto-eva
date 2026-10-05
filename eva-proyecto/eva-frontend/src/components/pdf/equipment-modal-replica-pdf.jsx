@@ -620,16 +620,28 @@ const EquipmentModalReplicaPDF = ({ data }) => {
                 </Text>
                 <Text style={styles.dataTableCell}>{ticket.estado || ticket.estado_nombre || ({1:'Abierto',2:'Asignado',3:'Diagnosticado',4:'Cerrado',5:'Esperando cierre'}[Number(ticket.estado_id)]) || 'Sin estado'}</Text>
                 <Text style={styles.dataTableCell}>
-                  {ticket.file_cierre ? (
-                    <Link 
-                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://192.168.56.1:8001'}/storage/correctivos_generales/${ticket.file_cierre}`}
-                      style={styles.link}
-                    >
-                      Ver
-                    </Link>
-                  ) : (
-                    'Sin archivo'
-                  )}
+                  {(() => {
+                    // Mismos archivos que muestra la tabla en pantalla: evidencia, diagnóstico y cierre
+                    const archivos = [
+                      { campo: ticket.image, etiqueta: 'Evidencia' },
+                      { campo: ticket.file_diagnostico, etiqueta: 'Diagnóstico' },
+                      { campo: ticket.file_cierre, etiqueta: 'Cierre' },
+                    ].filter((a) => a.campo && String(a.campo).trim() !== '');
+
+                    if (archivos.length === 0) return 'Sin archivo';
+
+                    const base = import.meta.env.VITE_API_BASE_URL || 'http://192.168.56.1:8001';
+
+                    return archivos.map((a, i) => (
+                      <Link
+                        key={a.etiqueta}
+                        src={`${base}/storage/correctivos_generales/${String(a.campo).replace(/^correctivos_generales\//, '')}`}
+                        style={styles.link}
+                      >
+                        {i > 0 ? ` · ${a.etiqueta}` : a.etiqueta}
+                      </Link>
+                    ));
+                  })()}
                 </Text>
               </View>
             ))

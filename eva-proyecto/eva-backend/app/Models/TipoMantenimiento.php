@@ -12,7 +12,12 @@ class TipoMantenimiento extends Model
     use HasFactory;
 
     protected $table = 'tipos_mantenimientos';
-    protected $fillable = ['codigo', 'nombre', 'id_padre'];
+    protected $fillable = ['codigo', 'nombre', 'id_padre', 'aplica_industrial', 'aplica_infraestructura'];
+
+    protected $casts = [
+        'aplica_industrial' => 'boolean',
+        'aplica_infraestructura' => 'boolean',
+    ];
     public $timestamps = false;
 
     /**

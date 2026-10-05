@@ -359,22 +359,26 @@ function IndustrialDevices() {
   };
 
   // Handle opening maintenance documents - PREVENTIVO
-  const handleOpenMaintenanceDocument = async (equipmentId) => {
+  // Recibe la fila de la tabla: el backend ya envía el archivo del mismo mantenimiento
+  // cuya fecha se está mostrando, así que normalmente no hace falta consultar nada más.
+  const handleOpenMaintenanceDocument = async (equipo) => {
+    const equipmentId = typeof equipo === "object" && equipo !== null ? equipo.id : equipo;
+    const archivoDeLaTabla = typeof equipo === "object" && equipo !== null
+      ? equipo.mantenimiento?.ultimoMantenimientoArchivo
+      : null;
+
+    if (archivoDeLaTabla && archivoDeLaTabla.trim() !== "") {
+      const fileName = archivoDeLaTabla.replace(/^mantenimientos\//, "");
+      window.open(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8001"}/storage/mantenimientos/${fileName}`,
+        "_blank"
+      );
+      return;
+    }
+
     try {
 
-      // Casos específicos conocidos con archivos preventivos
-      const equiposConocidos = {
-        5119: 'SK00602904-PM.pdf', // BOMBA DE INFUSION
-        // Agregar más equipos según se encuentren
-      };
-
-      if (equiposConocidos[equipmentId]) {
-        const knownFile = equiposConocidos[equipmentId];
-        const fileUrl = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8001"}/storage/mantenimientos/${knownFile}`;
-        window.open(fileUrl, "_blank");
-        return;
-      }
-
+      // Sin archivo en el último mantenimiento: se busca el anterior que sí tenga documento
       // Usar endpoint de mantenimientos ejecutados (no planes)
       const response = await fetch(
         `${import.meta.env.VITE_API_URL || "http://localhost:8001/api"}/v1/mantenimientos-ejecutados?equipo_id=${equipmentId}&per_page=100`,
@@ -406,24 +410,33 @@ function IndustrialDevices() {
       }
 
       if (maintenanceRecords && maintenanceRecords.length > 0) {
-        // Filtrar solo los que tienen archivo y ordenar por fecha más reciente
-        const recordsWithFiles = maintenanceRecords
-          .filter(record => record.file && record.file.trim() !== '')
-          .sort((a, b) => {
-            const dateA = new Date(a.created_at || a.fecha_mantenimiento || 0);
-            const dateB = new Date(b.created_at || b.fecha_mantenimiento || 0);
-            return dateB.getTime() - dateA.getTime();
-          });
+        // Mismo criterio que la fecha que muestra la tabla: fecha del mantenimiento (o la
+        // programada) y, a igualdad, el registro más nuevo. Antes se ordenaba por created_at,
+        // que es la fecha de registro, y por eso se abría el documento de otro mantenimiento.
+        const fechaDelRegistro = (r) => r.fecha_mantenimiento || r.fecha_programada || r.created_at || "";
+        const ordenados = [...maintenanceRecords].sort((a, b) => {
+          const comparacion = String(fechaDelRegistro(b)).localeCompare(String(fechaDelRegistro(a)));
+          return comparacion !== 0 ? comparacion : (Number(b.id) || 0) - (Number(a.id) || 0);
+        });
 
-        if (recordsWithFiles.length > 0) {
-          const latestMaintenance = recordsWithFiles[0];
+        const ultimo = ordenados[0];
+        const conArchivo = ordenados.find((r) => r.file && r.file.trim() !== "");
+
+        if (conArchivo) {
+          // Si el último mantenimiento no tiene documento se abre el anterior que sí lo tiene,
+          // pero avisando de qué fecha es para no confundirlo con el de la tabla.
+          if (conArchivo !== ultimo) {
+            const fechaUltimo = parseLocalDate(fechaDelRegistro(ultimo))?.toLocaleDateString() || "sin fecha";
+            const fechaAbierto = parseLocalDate(fechaDelRegistro(conArchivo))?.toLocaleDateString() || "sin fecha";
+            toast.warning(
+              `El mantenimiento del ${fechaUltimo} no tiene documento adjunto. Se abrió el del ${fechaAbierto}.`
+            );
+          }
 
           // Limpiar nombre del archivo de prefijos redundantes
-          const fileName = latestMaintenance.file.replace(/^mantenimientos\//, "");
+          const fileName = conArchivo.file.replace(/^mantenimientos\//, "");
 
-          // Abrir el documento directamente
           const fileUrl = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8001"}/storage/mantenimientos/${fileName}`;
-
           window.open(fileUrl, "_blank");
           return;
         }
@@ -1002,7 +1015,7 @@ function IndustrialDevices() {
                             size={15}
                             className="cursor-pointer hover:text-teal-600 transition-colors"
                             onClick={() =>
-                              handleOpenMaintenanceDocument(equipment.id)
+                              handleOpenMaintenanceDocument(equipment)
                             }
                             title="Abrir documento de mantenimiento"
                           />

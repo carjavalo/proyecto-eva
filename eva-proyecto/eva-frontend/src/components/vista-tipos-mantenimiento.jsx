@@ -111,12 +111,16 @@ export default function VistaTiposMantenimiento() {
       if (selectedItem) {
         response = await httpService.put(`/v1/tipos-mantenimiento/${selectedItem.id}`, {
           nombre: newData.nombre,
+          aplica_industrial: newData.aplicaIndustrial,
+          aplica_infraestructura: newData.aplicaInfraestructura,
           subcategories: newData.subcategories
         });
       } else {
         response = await httpService.post("/v1/tipos-mantenimiento", {
           codigo: newData.codigo,
           nombre: newData.nombre,
+          aplica_industrial: newData.aplicaIndustrial,
+          aplica_infraestructura: newData.aplicaInfraestructura,
           subcategories: newData.subcategories
         });
       }
@@ -301,6 +305,9 @@ export default function VistaTiposMantenimiento() {
                       Tipo de Mantenimiento {getSortIcon('nombre')}
                     </button>
                   </th>
+                  <th className="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 w-44">
+                    Aplica a
+                  </th>
                   <th className="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 w-40">
                     Subcategorías
                   </th>
@@ -315,13 +322,14 @@ export default function VistaTiposMantenimiento() {
                     <tr key={`skel-${i}`} className="animate-pulse">
                       <td className="px-6 py-4"><div className="h-5 w-16 bg-slate-100 rounded-full" /></td>
                       <td className="px-6 py-4"><div className="h-4 w-40 bg-slate-100 rounded" /></td>
+                      <td className="px-6 py-4"><div className="h-5 w-28 bg-slate-100 rounded-full" /></td>
                       <td className="px-6 py-4"><div className="h-5 w-24 bg-slate-100 rounded-full" /></td>
                       <td className="px-6 py-4 text-right"><div className="flex gap-2 justify-end"><div className="h-8 w-8 bg-slate-100 rounded-lg" /><div className="h-8 w-8 bg-slate-100 rounded-lg" /></div></td>
                     </tr>
                   ))
                 ) : currentItems.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="h-64 text-center">
+                    <td colSpan={5} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <Wrench className="h-16 w-16 text-slate-100" />
                         <span className="text-slate-400 font-medium italic">No se encontraron registros</span>
@@ -345,6 +353,20 @@ export default function VistaTiposMantenimiento() {
                             <Wrench className="w-4 h-4" />
                           </div>
                           <span className="font-bold text-slate-700 uppercase tracking-wide">{item.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {(item.aplica_industrial ?? true) && (
+                            <Badge className="bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100 px-2.5 py-1 rounded-lg font-medium">
+                              Industrial
+                            </Badge>
+                          )}
+                          {(item.aplica_infraestructura ?? true) && (
+                            <Badge className="bg-green-50 text-green-700 border border-green-100 hover:bg-green-100 px-2.5 py-1 rounded-lg font-medium">
+                              Infraestructura
+                            </Badge>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">

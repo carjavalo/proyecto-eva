@@ -20,6 +20,15 @@ class TipoMantenimientoController extends Controller
                 ->whereNull('id_padre')
                 ->with('subcategories');
 
+            // ?linea=industrial|infraestructura: solo las categorías marcadas para esa línea.
+            // Sin el parámetro se devuelven todas (es lo que necesita el CRUD).
+            $linea = $request->get('linea');
+            if ($linea === 'industrial') {
+                $query->where('aplica_industrial', 1);
+            } elseif ($linea === 'infraestructura') {
+                $query->where('aplica_infraestructura', 1);
+            }
+
             if ($request->search) {
                 $query->where(function($q) use ($request) {
                     $q->where('nombre', 'LIKE', "%{$request->search}%")
@@ -43,12 +52,24 @@ class TipoMantenimientoController extends Controller
             $request->validate([
                 'codigo' => 'required|string|max:100|unique:tipos_mantenimientos,codigo',
                 'nombre' => 'required|string|max:100',
+                'aplica_industrial' => 'nullable|boolean',
+                'aplica_infraestructura' => 'nullable|boolean',
                 'subcategories' => 'nullable|array'
             ]);
+
+            // Al menos una línea; si no viene nada, la categoría sirve para las dos
+            $aplicaIndustrial = $request->boolean('aplica_industrial', true);
+            $aplicaInfraestructura = $request->boolean('aplica_infraestructura', true);
+            if (!$aplicaIndustrial && !$aplicaInfraestructura) {
+                DB::rollBack();
+                return ResponseFormatter::error(null, 'La categoría debe aplicar al menos a una línea: industrial o infraestructura', 422);
+            }
 
             $mainType = TipoMantenimiento::create([
                 'codigo' => $request->codigo,
                 'nombre' => $request->nombre,
+                'aplica_industrial' => $aplicaIndustrial,
+                'aplica_infraestructura' => $aplicaInfraestructura,
                 'id_padre' => null
             ]);
 
@@ -57,6 +78,9 @@ class TipoMantenimientoController extends Controller
                     TipoMantenimiento::create([
                         'codigo' => $mainType->codigo . '-' . strtoupper(substr(uniqid(), -4)),
                         'nombre' => $subName,
+                        // La subcategoría hereda las líneas de su categoría
+                        'aplica_industrial' => $mainType->aplica_industrial,
+                        'aplica_infraestructura' => $mainType->aplica_infraestructura,
                         'id_padre' => $mainType->id
                     ]);
                 }
@@ -64,6 +88,10 @@ class TipoMantenimientoController extends Controller
 
             DB::commit();
             return ResponseFormatter::success($mainType->load('subcategories'), 'Tipo de mantenimiento creado correctamente', 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Sin esto el catch general convertía los errores de validación en un 500 sin detalle
+            DB::rollBack();
+            return ResponseFormatter::error($e->errors(), 'Revisa los datos del formulario', 422);
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error en TipoMantenimientoController::store: ' . $e->getMessage());
@@ -79,11 +107,22 @@ class TipoMantenimientoController extends Controller
 
             $request->validate([
                 'nombre' => 'required|string|max:100',
+                'aplica_industrial' => 'nullable|boolean',
+                'aplica_infraestructura' => 'nullable|boolean',
                 'subcategories' => 'nullable|array'
             ]);
 
+            $aplicaIndustrial = $request->boolean('aplica_industrial', (bool) $mainType->aplica_industrial);
+            $aplicaInfraestructura = $request->boolean('aplica_infraestructura', (bool) $mainType->aplica_infraestructura);
+            if (!$aplicaIndustrial && !$aplicaInfraestructura) {
+                DB::rollBack();
+                return ResponseFormatter::error(null, 'La categoría debe aplicar al menos a una línea: industrial o infraestructura', 422);
+            }
+
             $mainType->update([
-                'nombre' => $request->nombre
+                'nombre' => $request->nombre,
+                'aplica_industrial' => $aplicaIndustrial,
+                'aplica_infraestructura' => $aplicaInfraestructura
             ]);
 
             if ($request->has('subcategories') && is_array($request->subcategories)) {
@@ -92,6 +131,9 @@ class TipoMantenimientoController extends Controller
                     TipoMantenimiento::create([
                         'codigo' => $mainType->codigo . '-' . strtoupper(substr(uniqid(), -4)),
                         'nombre' => $subName,
+                        // La subcategoría hereda las líneas de su categoría
+                        'aplica_industrial' => $mainType->aplica_industrial,
+                        'aplica_infraestructura' => $mainType->aplica_infraestructura,
                         'id_padre' => $mainType->id
                     ]);
                 }
@@ -99,6 +141,10 @@ class TipoMantenimientoController extends Controller
 
             DB::commit();
             return ResponseFormatter::success($mainType->load('subcategories'), 'Tipo de mantenimiento actualizado correctamente');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Sin esto el catch general convertía los errores de validación en un 500 sin detalle
+            DB::rollBack();
+            return ResponseFormatter::error($e->errors(), 'Revisa los datos del formulario', 422);
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error en TipoMantenimientoController::update: ' . $e->getMessage());

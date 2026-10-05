@@ -35,6 +35,8 @@ export default function UIModalMantenimiento({
         setFormData({
           nombre: "",
           codigo: generateRandomCode(),
+          aplicaIndustrial: true,
+          aplicaInfraestructura: true,
           hasSubcategory: false,
           subcategories: []
         });
@@ -44,6 +46,9 @@ export default function UIModalMantenimiento({
         setFormData({
           codigo: data.codigo,
           nombre: data.nombre,
+          // Las categorías creadas antes de esta opción sirven para las dos líneas
+          aplicaIndustrial: data.aplica_industrial ?? true,
+          aplicaInfraestructura: data.aplica_infraestructura ?? true,
           hasSubcategory: subNames.length > 0,
           subcategories: subNames
         });
@@ -81,6 +86,11 @@ export default function UIModalMantenimiento({
 
     if (!formData.nombre.trim()) {
       toast.error("El nombre es obligatorio");
+      return;
+    }
+
+    if (!formData.aplicaIndustrial && !formData.aplicaInfraestructura) {
+      toast.error("Elige al menos una línea: industrial o infraestructura");
       return;
     }
 
@@ -126,6 +136,31 @@ export default function UIModalMantenimiento({
           </div>
 
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-semibold text-slate-900">¿Para qué tickets sirve?</Label>
+              <p className="text-xs text-slate-500">
+                Solo se ofrecerá al crear tickets de las líneas marcadas
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm text-slate-700">Tickets industriales</Label>
+              <Switch
+                checked={formData.aplicaIndustrial}
+                onCheckedChange={(val) => handleInputChange("aplicaIndustrial", val)}
+                disabled={isView}
+              />
+            </div>
+
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <Label className="text-sm text-slate-700">Tickets de infraestructura</Label>
+              <Switch
+                checked={formData.aplicaInfraestructura}
+                onCheckedChange={(val) => handleInputChange("aplicaInfraestructura", val)}
+                disabled={isView}
+              />
+            </div>
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold text-slate-900">¿Tiene subcategorías?</Label>

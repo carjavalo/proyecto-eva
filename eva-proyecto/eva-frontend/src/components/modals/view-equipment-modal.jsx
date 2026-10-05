@@ -54,6 +54,9 @@ export function ViewEquipmentModal({
   const [cambiosHdv, setCambiosHdv] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [equipmentTickets, setEquipmentTickets] = useState([]);
+  // La tabla muestra los más recientes y deja desplegar el resto: hay equipos con decenas de tickets
+  const TICKETS_VISIBLES = 5;
+  const [verTodosLosTickets, setVerTodosLosTickets] = useState(false);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [showTicketDetailsModal, setShowTicketDetailsModal] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
@@ -188,7 +191,7 @@ export function ViewEquipmentModal({
       const response = await httpService.get('/v1/gestion-tickets', {
         params: {
           equipo_id: equipmentId,
-          per_page: 10,
+          per_page: 300,
           page: 1
         }
       });
@@ -382,6 +385,7 @@ export function ViewEquipmentModal({
       setImageError(false); // Reset image error state
       fetchEquipmentDetails(equipment.id);
       // Cargar tickets desde cache (en paralelo con el resto)
+      setVerTodosLosTickets(false); // cada equipo arranca con la lista plegada
       setLoadingTickets(true);
       prefetchEquipmentTickets(equipment.id)
         .then(tickets => {
@@ -1263,7 +1267,7 @@ export function ViewEquipmentModal({
                         </td>
                       </tr>
                     ) : equipmentTickets && equipmentTickets.length > 0 ? (
-                      equipmentTickets.map((ticket, index) => (
+                      (verTodosLosTickets ? equipmentTickets : equipmentTickets.slice(0, TICKETS_VISIBLES)).map((ticket, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="border border-gray-200 px-3 py-2 text-sm font-medium text-gray-800">
                             #{ticket.id}
@@ -1296,21 +1300,41 @@ export function ViewEquipmentModal({
                             })()}
                           </td>
                           <td className="border border-gray-200 px-3 py-2 text-sm">
-                            {ticket.file_cierre ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.146:8001'}/storage/correctivos_generales/${ticket.file_cierre}`, '_blank')}
-                                className="text-gray-800 hover:bg-gray-100 h-7 px-2"
-                                title="Ver orden de trabajo"
-                              >
-                                <ExternalLink className="w-4 h-4 mr-1" />
-                                Ver
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400 text-xs">Sin archivo</span>
-                            )}
+                            {(() => {
+                              // Un ticket puede traer la evidencia del reporte, el soporte del
+                              // diagnóstico y la orden de cierre. Antes solo se miraba el cierre,
+                              // así que los otros dos aparecían como «Sin archivo».
+                              const archivos = [
+                                { campo: ticket.image, etiqueta: 'Evidencia' },
+                                { campo: ticket.file_diagnostico, etiqueta: 'Diagnóstico' },
+                                { campo: ticket.file_cierre, etiqueta: 'Cierre' },
+                              ].filter((a) => a.campo && String(a.campo).trim() !== '');
+
+                              if (archivos.length === 0) {
+                                return <span className="text-gray-400 text-xs">Sin archivo</span>;
+                              }
+
+                              const base = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.146:8001';
+
+                              return (
+                                <div className="flex flex-wrap gap-1">
+                                  {archivos.map((a) => (
+                                    <Button
+                                      key={a.etiqueta}
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => window.open(`${base}/storage/correctivos_generales/${String(a.campo).replace(/^correctivos_generales\//, '')}`, '_blank')}
+                                      className="text-gray-800 hover:bg-gray-100 h-7 px-2"
+                                      title={`Ver archivo de ${a.etiqueta.toLowerCase()}`}
+                                    >
+                                      <ExternalLink className="w-4 h-4 mr-1" />
+                                      {a.etiqueta}
+                                    </Button>
+                                  ))}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="border border-gray-200 px-3 py-2 text-center">
                             <Button
@@ -1338,6 +1362,21 @@ export function ViewEquipmentModal({
                   </tbody>
                 </table>
               </div>
+              {equipmentTickets.length > TICKETS_VISIBLES && (
+                <div className="border border-t-0 border-gray-300 bg-gray-50 px-3 py-2 text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setVerTodosLosTickets((v) => !v)}
+                    className="text-gray-700 hover:bg-gray-100"
+                  >
+                    {verTodosLosTickets
+                      ? `Ver solo los ${TICKETS_VISIBLES} más recientes`
+                      : `Ver los ${equipmentTickets.length} tickets del equipo`}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* CORRECTIVOS GENERALES - NUEVA SECCIÓN */}

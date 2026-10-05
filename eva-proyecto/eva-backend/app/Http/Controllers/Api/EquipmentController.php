@@ -992,7 +992,15 @@ class EquipmentController extends ApiController
                     // Información adicional dinámica
                     DB::raw('(SELECT COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) FROM mantenimiento
                              WHERE equipo_id = equipos.id
-                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC LIMIT 1) AS ultimo_mantenimiento'),
+                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC, id DESC LIMIT 1) AS ultimo_mantenimiento'),
+                    // Archivo e id de ESA misma fila, para que el enlace de la tabla abra el documento
+                    // que corresponde a la fecha mostrada y no tenga que adivinarlo el navegador.
+                    DB::raw('(SELECT file FROM mantenimiento
+                             WHERE equipo_id = equipos.id
+                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC, id DESC LIMIT 1) AS ultimo_mantenimiento_file'),
+                    DB::raw('(SELECT id FROM mantenimiento
+                             WHERE equipo_id = equipos.id
+                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC, id DESC LIMIT 1) AS ultimo_mantenimiento_id'),
                     DB::raw("(SELECT NULLIF(
                                  GREATEST(
                                      COALESCE((SELECT MAX(fecha_calibracion) FROM calibracion WHERE equipo_id = equipos.id), '0001-01-01'),
@@ -1235,6 +1243,8 @@ class EquipmentController extends ApiController
 
                     'mantenimiento' => [
                         'ultimoMantenimiento' => $equipo->ultimo_mantenimiento,
+                        'ultimoMantenimientoArchivo' => $equipo->ultimo_mantenimiento_file ?? null,
+                        'ultimoMantenimientoId' => $equipo->ultimo_mantenimiento_id ?? null,
                         'ultimaCalibración' => $equipo->ultima_calibracion,
                         'ultimoCorrectivo' => $equipo->ultimo_correctivo,
                         'ultimoCorrectivoGeneral' => $equipo->ultimo_correctivo_general,
@@ -1381,7 +1391,15 @@ class EquipmentController extends ApiController
                     // Información adicional dinámica con subconsultas corregidas
                     DB::raw('(SELECT COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) FROM mantenimiento 
                              WHERE equipo_id = equipos.id 
-                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC LIMIT 1) AS ultimo_mantenimiento'),
+                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC, id DESC LIMIT 1) AS ultimo_mantenimiento'),
+                    // Archivo e id de ESA misma fila, para que el enlace de la tabla abra el documento
+                    // que corresponde a la fecha mostrada y no tenga que adivinarlo el navegador.
+                    DB::raw('(SELECT file FROM mantenimiento
+                             WHERE equipo_id = equipos.id
+                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC, id DESC LIMIT 1) AS ultimo_mantenimiento_file'),
+                    DB::raw('(SELECT id FROM mantenimiento
+                             WHERE equipo_id = equipos.id
+                             ORDER BY COALESCE(fecha_mantenimiento, fecha_programada, DATE(created_at)) DESC, id DESC LIMIT 1) AS ultimo_mantenimiento_id'),
                     DB::raw('(SELECT fecha_calibracion FROM calibracion 
                              WHERE equipo_id = equipos.id 
                              ORDER BY fecha_calibracion DESC LIMIT 1) AS ultima_calibracion'),
@@ -1710,6 +1728,8 @@ class EquipmentController extends ApiController
                     ],
                     'mantenimiento' => [
                         'ultimoMantenimiento' => $equipo->ultimo_mantenimiento,
+                        'ultimoMantenimientoArchivo' => $equipo->ultimo_mantenimiento_file ?? null,
+                        'ultimoMantenimientoId' => $equipo->ultimo_mantenimiento_id ?? null,
                         'ultimaCalibración' => $equipo->ultima_calibracion ?? null,
                         'ultimoCorrectivo' => $equipo->ultimo_correctivo ?? null,
                         'ultimoCorrectivoGeneral' => $equipo->ultimo_correctivo_general ?? null,
@@ -2455,7 +2475,8 @@ class EquipmentController extends ApiController
                 $equipoData['user_history'] = [];
             }
 
-            // 13. Tickets/Órdenes relacionados al equipo (últimos 10)
+            // 13. Tickets/Órdenes del equipo: se envían todos (la hoja de vida los despliega);
+            // el tope alto es solo una salvaguarda, hoy ningún equipo pasa de 30.
             try {
                 $tickets = DB::table('ordenes')
                     ->leftJoin('subprocesos', 'ordenes.subproceso_id', '=', 'subprocesos.id')
@@ -2476,6 +2497,10 @@ class EquipmentController extends ApiController
                         'ordenes.diagnostico',
                         'ordenes.reparacion',
                         'ordenes.image',
+                        // Un ticket puede traer evidencia, soporte del diagnóstico y orden de cierre:
+                        // sin estas dos la hoja de vida mostraba «Sin archivo» aunque el archivo existiera.
+                        'ordenes.file_diagnostico',
+                        'ordenes.file_cierre',
                         'subprocesos.nombre as origen',
                         'reportante.nombre as reportante_nombre',
                         'reportante.apellido as reportante_apellido',
@@ -2486,7 +2511,7 @@ class EquipmentController extends ApiController
                         'sedes.name as sede_nombre'
                     ])
                     ->orderBy('ordenes.fecha_inicio', 'desc')
-                    ->limit(10)
+                    ->limit(300)
                     ->get();
 
                 // Mapear estado_id a texto (mismos valores que /v1/gestion-tickets)
