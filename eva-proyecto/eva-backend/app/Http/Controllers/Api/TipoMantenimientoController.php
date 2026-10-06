@@ -100,10 +100,18 @@ class TipoMantenimientoController extends Controller
             ]);
 
             if ($request->has('subcategories') && is_array($request->subcategories)) {
-                foreach ($request->subcategories as $subName) {
+                foreach ($request->subcategories as $sub) {
+                    // El formulario manda objetos {id, nombre, activo}; se acepta también
+                    // el formato antiguo, que era solo el nombre como texto.
+                    $nombre = is_array($sub) ? trim((string) ($sub['nombre'] ?? '')) : trim((string) $sub);
+                    if ($nombre === '') {
+                        continue;
+                    }
+
                     TipoMantenimiento::create([
                         'codigo' => $mainType->codigo . '-' . strtoupper(substr(uniqid(), -4)),
-                        'nombre' => $subName,
+                        'nombre' => $nombre,
+                        'activo' => is_array($sub) && array_key_exists('activo', $sub) ? (bool) $sub['activo'] : true,
                         // La subcategoría hereda las líneas de su categoría
                         'aplica_industrial' => $mainType->aplica_industrial,
                         'aplica_infraestructura' => $mainType->aplica_infraestructura,
