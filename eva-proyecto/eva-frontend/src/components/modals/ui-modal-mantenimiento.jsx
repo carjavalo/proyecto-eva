@@ -45,7 +45,13 @@ export default function UIModalMantenimiento({
         // Map backend subcategories to names array
         // Se conserva el id de cada subcategoría: si se recrearan, los tickets ya guardados
         // quedarían apuntando a registros que ya no existen.
-        const subNames = data.subcategories?.map(sc => ({ id: sc.id, nombre: sc.nombre, activo: sc.activo ?? true })) || [];
+        const subNames = data.subcategories?.map(sc => ({
+          id: sc.id,
+          nombre: sc.nombre,
+          activo: sc.activo ?? true,
+          aplicaIndustrial: sc.aplica_industrial ?? true,
+          aplicaInfraestructura: sc.aplica_infraestructura ?? true,
+        })) || [];
         setFormData({
           codigo: data.codigo,
           nombre: data.nombre,
@@ -69,7 +75,13 @@ export default function UIModalMantenimiento({
     if (!newSubName.trim()) return;
     setFormData(prev => ({
       ...prev,
-      subcategories: [...prev.subcategories, { id: null, nombre: newSubName.trim(), activo: true }]
+      subcategories: [...prev.subcategories, {
+        id: null,
+        nombre: newSubName.trim(),
+        activo: true,
+        aplicaIndustrial: prev.aplicaIndustrial,
+        aplicaInfraestructura: prev.aplicaInfraestructura,
+      }]
     }));
     setNewSubName("");
   };
@@ -80,6 +92,16 @@ export default function UIModalMantenimiento({
       ...prev,
       subcategories: prev.subcategories.map((sub, i) =>
         i === index ? { ...(typeof sub === "string" ? { id: null, nombre: sub, activo: true } : sub), nombre: valor } : sub
+      )
+    }));
+  };
+
+  // Cada subcategoría puede servir solo a industrial, solo a infraestructura o a ambas
+  const alternarLineaSubcategoria = (index, campo) => {
+    setFormData(prev => ({
+      ...prev,
+      subcategories: prev.subcategories.map((sub, i) =>
+        i === index ? { ...sub, [campo]: !(sub[campo] ?? true) } : sub
       )
     }));
   };
@@ -256,6 +278,31 @@ export default function UIModalMantenimiento({
                         </span>
                         {!isView && (
                           <span className="flex items-center gap-3 shrink-0">
+                            {formData.aplicaIndustrial && formData.aplicaInfraestructura && (
+                              <span className="flex items-center gap-1">
+                                {[
+                                  { campo: "aplicaIndustrial", texto: "Ind.", titulo: "Ofrecerla en tickets industriales" },
+                                  { campo: "aplicaInfraestructura", texto: "Infra.", titulo: "Ofrecerla en tickets de infraestructura" },
+                                ].map(({ campo, texto, titulo }) => {
+                                  const puesto = sub[campo] ?? true;
+                                  return (
+                                    <button
+                                      key={campo}
+                                      type="button"
+                                      onClick={() => alternarLineaSubcategoria(idx, campo)}
+                                      title={titulo}
+                                      className={`text-[10px] font-semibold px-2 py-1 rounded border transition-colors ${
+                                        puesto
+                                          ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                          : "bg-white border-slate-200 text-slate-300 hover:text-slate-500"
+                                      }`}
+                                    >
+                                      {texto}
+                                    </button>
+                                  );
+                                })}
+                              </span>
+                            )}
                             <button
                               type="button"
                               onClick={() => alternarSubcategoria(idx)}

@@ -13,6 +13,22 @@ use Exception;
 
 class TipoMantenimientoController extends Controller
 {
+    /**
+     * Líneas de una subcategoría. Si no vienen, hereda las de su categoría, y nunca puede
+     * aplicar a una línea que la categoría no tenga.
+     */
+    private static function lineasSubcategoria($sub, bool $padreIndustrial, bool $padreInfraestructura): array
+    {
+        $pedido = fn ($clave, $porDefecto) => is_array($sub) && array_key_exists($clave, $sub)
+            ? (bool) $sub[$clave]
+            : $porDefecto;
+
+        return [
+            $pedido('aplica_industrial', $padreIndustrial) && $padreIndustrial,
+            $pedido('aplica_infraestructura', $padreInfraestructura) && $padreInfraestructura,
+        ];
+    }
+
     /** Cuántos tickets (tabla ordenes) tienen registrada esta categoría o subcategoría. */
     private static function ticketsQueUsan($ids): int
     {
@@ -34,11 +50,20 @@ class TipoMantenimientoController extends Controller
             // de tickets, pero solo se listan si el CRUD las pide con ?incluir_inactivas=1.
             $incluirInactivas = $request->boolean('incluir_inactivas');
 
+            $linea = $request->get('linea');
+
             $query = TipoMantenimiento::query()
                 ->whereNull('id_padre')
-                ->with(['subcategories' => function ($q) use ($incluirInactivas) {
+                ->with(['subcategories' => function ($q) use ($incluirInactivas, $linea) {
                     if (!$incluirInactivas) {
                         $q->where('activo', 1);
+                    }
+                    // Cada subcategoría tiene sus propias líneas: una categoría puede servir a
+                    // industrial y a infraestructura con subcategorías distintas en cada una.
+                    if ($linea === 'industrial') {
+                        $q->where('aplica_industrial', 1);
+                    } elseif ($linea === 'infraestructura') {
+                        $q->where('aplica_infraestructura', 1);
                     }
                 }]);
 
@@ -48,7 +73,6 @@ class TipoMantenimientoController extends Controller
 
             // ?linea=industrial|infraestructura: solo las categorías marcadas para esa línea.
             // Sin el parámetro se devuelven todas (es lo que necesita el CRUD).
-            $linea = $request->get('linea');
             if ($linea === 'industrial') {
                 $query->where('aplica_industrial', 1);
             } elseif ($linea === 'infraestructura') {
@@ -108,13 +132,18 @@ class TipoMantenimientoController extends Controller
                         continue;
                     }
 
+                    [$subInd, $subInf] = self::lineasSubcategoria($sub, $aplicaIndustrial, $aplicaInfraestructura);
+                    if (!$subInd && !$subInf) {
+                        DB::rollBack();
+                        return ResponseFormatter::error(null, "La subcategoria {$nombre} debe aplicar al menos a una linea de las que tiene su categoria", 422);
+                    }
+
                     TipoMantenimiento::create([
                         'codigo' => $mainType->codigo . '-' . strtoupper(substr(uniqid(), -4)),
                         'nombre' => $nombre,
                         'activo' => is_array($sub) && array_key_exists('activo', $sub) ? (bool) $sub['activo'] : true,
-                        // La subcategoría hereda las líneas de su categoría
-                        'aplica_industrial' => $mainType->aplica_industrial,
-                        'aplica_infraestructura' => $mainType->aplica_infraestructura,
+                        'aplica_industrial' => $subInd,
+                        'aplica_infraestructura' => $subInf,
                         'id_padre' => $mainType->id
                     ]);
                 }
@@ -175,8 +204,9 @@ class TipoMantenimientoController extends Controller
                             'id' => $sub['id'] ?? null,
                             'nombre' => trim((string) ($sub['nombre'] ?? '')),
                             'activo' => array_key_exists('activo', $sub) ? (bool) $sub['activo'] : true,
+                            'lineas' => $sub,
                         ]
-                        : ['id' => null, 'nombre' => trim((string) $sub), 'activo' => true];
+                        : ['id' => null, 'nombre' => trim((string) $sub), 'activo' => true, 'lineas' => null];
                 })->filter(fn ($sub) => $sub['nombre'] !== '');
 
                 $existentes = $mainType->subcategories()->get()->keyBy('id');
@@ -191,21 +221,36 @@ class TipoMantenimientoController extends Controller
                     }
 
                     if ($actual) {
+                        [$subInd, $subInf] = self::lineasSubcategoria(
+                            $sub['lineas'] ?? ['aplica_industrial' => $actual->aplica_industrial, 'aplica_infraestructura' => $actual->aplica_infraestructura],
+                            $aplicaIndustrial,
+                            $aplicaInfraestructura
+                        );
+                        if (!$subInd && !$subInf) {
+                            DB::rollBack();
+                            return ResponseFormatter::error(null, "La subcategoria {$sub['nombre']} debe aplicar al menos a una linea de las que tiene su categoria", 422);
+                        }
+
                         $actual->update([
                             'nombre' => $sub['nombre'],
                             'activo' => $sub['activo'],
-                            'aplica_industrial' => $aplicaIndustrial,
-                            'aplica_infraestructura' => $aplicaInfraestructura,
+                            'aplica_industrial' => $subInd,
+                            'aplica_infraestructura' => $subInf,
                         ]);
                         $conservados[] = $actual->id;
                     } else {
+                        [$subInd, $subInf] = self::lineasSubcategoria($sub['lineas'], $aplicaIndustrial, $aplicaInfraestructura);
+                        if (!$subInd && !$subInf) {
+                            DB::rollBack();
+                            return ResponseFormatter::error(null, "La subcategoria {$sub['nombre']} debe aplicar al menos a una linea de las que tiene su categoria", 422);
+                        }
+
                         $nueva = TipoMantenimiento::create([
                             'codigo' => $mainType->codigo . '-' . strtoupper(substr(uniqid(), -4)),
                             'nombre' => $sub['nombre'],
                             'activo' => $sub['activo'],
-                            // La subcategoría hereda las líneas de su categoría
-                            'aplica_industrial' => $aplicaIndustrial,
-                            'aplica_infraestructura' => $aplicaInfraestructura,
+                            'aplica_industrial' => $subInd,
+                            'aplica_infraestructura' => $subInf,
                             'id_padre' => $mainType->id
                         ]);
                         $conservados[] = $nueva->id;

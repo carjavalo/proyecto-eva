@@ -105,6 +105,20 @@ export default function VistaTiposMantenimiento() {
     setIsModalOpen(true);
   };
 
+  // El formulario usa nombres en camelCase; el backend espera aplica_industrial / aplica_infraestructura
+  const subcategoriasParaBackend = (subcategorias = []) =>
+    subcategorias.map((sub) =>
+      typeof sub === "string"
+        ? { id: null, nombre: sub }
+        : {
+            id: sub.id ?? null,
+            nombre: sub.nombre,
+            activo: sub.activo ?? true,
+            aplica_industrial: sub.aplicaIndustrial ?? true,
+            aplica_infraestructura: sub.aplicaInfraestructura ?? true,
+          }
+    );
+
   const handleSave = async (newData) => {
     try {
       const loadingToast = toast.loading(selectedItem ? "Actualizando..." : "Guardando...");
@@ -116,7 +130,7 @@ export default function VistaTiposMantenimiento() {
           activo: newData.activo,
           aplica_industrial: newData.aplicaIndustrial,
           aplica_infraestructura: newData.aplicaInfraestructura,
-          subcategories: newData.subcategories
+          subcategories: subcategoriasParaBackend(newData.subcategories)
         });
       } else {
         response = await httpService.post("/v1/tipos-mantenimiento", {
@@ -125,7 +139,7 @@ export default function VistaTiposMantenimiento() {
           activo: newData.activo,
           aplica_industrial: newData.aplicaIndustrial,
           aplica_infraestructura: newData.aplicaInfraestructura,
-          subcategories: newData.subcategories
+          subcategories: subcategoriasParaBackend(newData.subcategories)
         });
       }
 
