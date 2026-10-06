@@ -37,18 +37,22 @@ export default function UIModalMantenimiento({
           codigo: generateRandomCode(),
           aplicaIndustrial: true,
           aplicaInfraestructura: true,
+          activo: true,
           hasSubcategory: false,
           subcategories: []
         });
       } else if (data) {
         // Map backend subcategories to names array
-        const subNames = data.subcategories?.map(sc => sc.nombre) || [];
+        // Se conserva el id de cada subcategoría: si se recrearan, los tickets ya guardados
+        // quedarían apuntando a registros que ya no existen.
+        const subNames = data.subcategories?.map(sc => ({ id: sc.id, nombre: sc.nombre, activo: sc.activo ?? true })) || [];
         setFormData({
           codigo: data.codigo,
           nombre: data.nombre,
           // Las categorías creadas antes de esta opción sirven para las dos líneas
           aplicaIndustrial: data.aplica_industrial ?? true,
           aplicaInfraestructura: data.aplica_infraestructura ?? true,
+          activo: data.activo ?? true,
           hasSubcategory: subNames.length > 0,
           subcategories: subNames
         });
@@ -65,9 +69,29 @@ export default function UIModalMantenimiento({
     if (!newSubName.trim()) return;
     setFormData(prev => ({
       ...prev,
-      subcategories: [...prev.subcategories, newSubName.trim()]
+      subcategories: [...prev.subcategories, { id: null, nombre: newSubName.trim(), activo: true }]
     }));
     setNewSubName("");
+  };
+
+  // Renombrar en el sitio: se conserva el id, así que los tickets viejos siguen enlazados
+  const renombrarSubcategoria = (index, valor) => {
+    setFormData(prev => ({
+      ...prev,
+      subcategories: prev.subcategories.map((sub, i) =>
+        i === index ? { ...(typeof sub === "string" ? { id: null, nombre: sub, activo: true } : sub), nombre: valor } : sub
+      )
+    }));
+  };
+
+  // Retirar no borra: la subcategoría sigue existiendo para los tickets que ya la usan
+  const alternarSubcategoria = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      subcategories: prev.subcategories.map((sub, i) =>
+        i === index ? { ...sub, activo: !(sub.activo ?? true) } : sub
+      )
+    }));
   };
 
   const removeSubcategory = (index) => {
@@ -152,11 +176,25 @@ export default function UIModalMantenimiento({
               />
             </div>
 
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+            <div className="flex items-center justify-between">
               <Label className="text-sm text-slate-700">Tickets de infraestructura</Label>
               <Switch
                 checked={formData.aplicaInfraestructura}
                 onCheckedChange={(val) => handleInputChange("aplicaInfraestructura", val)}
+                disabled={isView}
+              />
+            </div>
+
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div className="space-y-0.5">
+                <Label className="text-sm text-slate-700">Disponible al crear tickets</Label>
+                <p className="text-xs text-slate-500">
+                  Apágalo para retirarla: deja de ofrecerse, pero los tickets que ya la tienen la siguen mostrando
+                </p>
+              </div>
+              <Switch
+                checked={formData.activo}
+                onCheckedChange={(val) => handleInputChange("activo", val)}
                 disabled={isView}
               />
             </div>
@@ -193,19 +231,50 @@ export default function UIModalMantenimiento({
                 <div className="space-y-2">
                   {formData.subcategories && formData.subcategories.length > 0 ? (
                     formData.subcategories.map((sub, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-200 text-sm shadow-sm group">
-                        <span className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          {sub}
+                      <div key={sub.id ?? `nueva-${idx}`} className="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200">
+                        <span className="flex items-center gap-2 flex-1 min-w-0">
+                          <CheckCircle className={`w-4 h-4 shrink-0 ${(sub.activo ?? true) ? "text-green-500" : "text-slate-300"}`} />
+                          {isView ? (
+                            <span className={(sub.activo ?? true) ? "" : "text-slate-400 line-through"}>
+                              {typeof sub === "string" ? sub : sub.nombre}
+                            </span>
+                          ) : (
+                            // Editable: al guardar se actualiza por id, así que renombrar no
+                            // rompe los tickets que ya tienen esta subcategoría registrada.
+                            <Input
+                              value={typeof sub === "string" ? sub : sub.nombre}
+                              onChange={(e) => renombrarSubcategoria(idx, e.target.value)}
+                              className={`h-8 border-slate-200 ${(sub.activo ?? true) ? "" : "text-slate-400 line-through"}`}
+                              placeholder="Nombre de la subcategoría"
+                            />
+                          )}
+                          {!(sub.activo ?? true) && (
+                            <span className="shrink-0 text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5">
+                              RETIRADA
+                            </span>
+                          )}
                         </span>
                         {!isView && (
-                          <button 
-                            type="button" 
-                            onClick={() => removeSubcategory(idx)}
-                            className="text-red-400 hover:text-red-600 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <span className="flex items-center gap-3 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => alternarSubcategoria(idx)}
+                              className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                              title={(sub.activo ?? true)
+                                ? "Retirar: deja de ofrecerse al crear tickets"
+                                : "Volver a ofrecerla al crear tickets"}
+                            >
+                              {(sub.activo ?? true) ? "Retirar" : "Reactivar"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeSubcategory(idx)}
+                              className="text-red-400 hover:text-red-600 transition-colors"
+                              title="Quitarla de la lista"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </span>
                         )}
                       </div>
                     ))

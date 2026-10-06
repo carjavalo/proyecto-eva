@@ -72,7 +72,9 @@ export default function VistaTiposMantenimiento() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await cachedGet("/v1/tipos-mantenimiento", { search: searchTerm });
+      // incluir_inactivas: las categorías retiradas siguen existiendo para el historial de
+      // tickets y deben verse aquí, aunque ya no se ofrezcan al crear un ticket.
+      const res = await cachedGet("/v1/tipos-mantenimiento", { search: searchTerm, incluir_inactivas: 1 });
       if (res.success) {
         setMantenimientosData(res.data);
       }
@@ -111,6 +113,7 @@ export default function VistaTiposMantenimiento() {
       if (selectedItem) {
         response = await httpService.put(`/v1/tipos-mantenimiento/${selectedItem.id}`, {
           nombre: newData.nombre,
+          activo: newData.activo,
           aplica_industrial: newData.aplicaIndustrial,
           aplica_infraestructura: newData.aplicaInfraestructura,
           subcategories: newData.subcategories
@@ -119,6 +122,7 @@ export default function VistaTiposMantenimiento() {
         response = await httpService.post("/v1/tipos-mantenimiento", {
           codigo: newData.codigo,
           nombre: newData.nombre,
+          activo: newData.activo,
           aplica_industrial: newData.aplicaIndustrial,
           aplica_infraestructura: newData.aplicaInfraestructura,
           subcategories: newData.subcategories
@@ -357,6 +361,11 @@ export default function VistaTiposMantenimiento() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
+                          {item.activo === false && (
+                            <Badge className="bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 px-2.5 py-1 rounded-lg font-medium">
+                              Retirada
+                            </Badge>
+                          )}
                           {(item.aplica_industrial ?? true) && (
                             <Badge className="bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100 px-2.5 py-1 rounded-lg font-medium">
                               Industrial

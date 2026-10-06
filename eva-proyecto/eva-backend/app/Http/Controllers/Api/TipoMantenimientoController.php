@@ -13,12 +13,38 @@ use Exception;
 
 class TipoMantenimientoController extends Controller
 {
+    /** Cuántos tickets (tabla ordenes) tienen registrada esta categoría o subcategoría. */
+    private static function ticketsQueUsan($ids): int
+    {
+        $ids = array_filter((array) $ids);
+        if (empty($ids)) {
+            return 0;
+        }
+
+        return DB::table('ordenes')
+            ->whereIn('tipo_mantenimiento_id', $ids)
+            ->orWhereIn('subcategoria_mantenimiento_id', $ids)
+            ->count();
+    }
+
     public function index(Request $request): JsonResponse
     {
         try {
+            // Las categorías retiradas (activo = 0) se conservan para no romper el historial
+            // de tickets, pero solo se listan si el CRUD las pide con ?incluir_inactivas=1.
+            $incluirInactivas = $request->boolean('incluir_inactivas');
+
             $query = TipoMantenimiento::query()
                 ->whereNull('id_padre')
-                ->with('subcategories');
+                ->with(['subcategories' => function ($q) use ($incluirInactivas) {
+                    if (!$incluirInactivas) {
+                        $q->where('activo', 1);
+                    }
+                }]);
+
+            if (!$incluirInactivas) {
+                $query->where('activo', 1);
+            }
 
             // ?linea=industrial|infraestructura: solo las categorías marcadas para esa línea.
             // Sin el parámetro se devuelven todas (es lo que necesita el CRUD).
@@ -109,6 +135,7 @@ class TipoMantenimientoController extends Controller
                 'nombre' => 'required|string|max:100',
                 'aplica_industrial' => 'nullable|boolean',
                 'aplica_infraestructura' => 'nullable|boolean',
+                'activo' => 'nullable|boolean',
                 'subcategories' => 'nullable|array'
             ]);
 
@@ -122,20 +149,70 @@ class TipoMantenimientoController extends Controller
             $mainType->update([
                 'nombre' => $request->nombre,
                 'aplica_industrial' => $aplicaIndustrial,
-                'aplica_infraestructura' => $aplicaInfraestructura
+                'aplica_infraestructura' => $aplicaInfraestructura,
+                // activo = 0 la retira: deja de ofrecerse al crear tickets, pero sigue
+                // existiendo para los tickets que ya la tienen registrada.
+                'activo' => $request->boolean('activo', (bool) $mainType->activo)
             ]);
 
             if ($request->has('subcategories') && is_array($request->subcategories)) {
-                $mainType->subcategories()->delete();
-                foreach ($request->subcategories as $subName) {
-                    TipoMantenimiento::create([
-                        'codigo' => $mainType->codigo . '-' . strtoupper(substr(uniqid(), -4)),
-                        'nombre' => $subName,
-                        // La subcategoría hereda las líneas de su categoría
-                        'aplica_industrial' => $mainType->aplica_industrial,
-                        'aplica_infraestructura' => $mainType->aplica_infraestructura,
-                        'id_padre' => $mainType->id
-                    ]);
+                // Las subcategorías NO se borran y se vuelven a crear: eso les cambiaría el id y
+                // los tickets ya guardados quedarían apuntando a la nada. Se actualizan por id,
+                // se crean las nuevas y las que el usuario quitó se retiran (o se borran solo si
+                // ningún ticket las usó).
+                $recibidas = collect($request->subcategories)->map(function ($sub) {
+                    // Acepta tanto ['Nombre', ...] como [['id' => 1, 'nombre' => 'Nombre'], ...]
+                    return is_array($sub)
+                        ? [
+                            'id' => $sub['id'] ?? null,
+                            'nombre' => trim((string) ($sub['nombre'] ?? '')),
+                            'activo' => array_key_exists('activo', $sub) ? (bool) $sub['activo'] : true,
+                        ]
+                        : ['id' => null, 'nombre' => trim((string) $sub), 'activo' => true];
+                })->filter(fn ($sub) => $sub['nombre'] !== '');
+
+                $existentes = $mainType->subcategories()->get()->keyBy('id');
+                $conservados = [];
+
+                foreach ($recibidas as $sub) {
+                    $actual = $sub['id'] ? $existentes->get($sub['id']) : null;
+
+                    // Si no llegó el id (formulario antiguo), se busca por nombre para no duplicar
+                    if (!$actual) {
+                        $actual = $existentes->first(fn ($e) => mb_strtolower($e->nombre) === mb_strtolower($sub['nombre']));
+                    }
+
+                    if ($actual) {
+                        $actual->update([
+                            'nombre' => $sub['nombre'],
+                            'activo' => $sub['activo'],
+                            'aplica_industrial' => $aplicaIndustrial,
+                            'aplica_infraestructura' => $aplicaInfraestructura,
+                        ]);
+                        $conservados[] = $actual->id;
+                    } else {
+                        $nueva = TipoMantenimiento::create([
+                            'codigo' => $mainType->codigo . '-' . strtoupper(substr(uniqid(), -4)),
+                            'nombre' => $sub['nombre'],
+                            'activo' => $sub['activo'],
+                            // La subcategoría hereda las líneas de su categoría
+                            'aplica_industrial' => $aplicaIndustrial,
+                            'aplica_infraestructura' => $aplicaInfraestructura,
+                            'id_padre' => $mainType->id
+                        ]);
+                        $conservados[] = $nueva->id;
+                    }
+                }
+
+                foreach ($existentes as $sobrante) {
+                    if (in_array($sobrante->id, $conservados, true)) {
+                        continue;
+                    }
+                    if (self::ticketsQueUsan($sobrante->id) > 0) {
+                        $sobrante->update(['activo' => 0]); // se conserva para el historial
+                    } else {
+                        $sobrante->delete();
+                    }
                 }
             }
 
@@ -156,6 +233,18 @@ class TipoMantenimientoController extends Controller
     {
         try {
             $mainType = TipoMantenimiento::findOrFail($id);
+
+            // Si algún ticket la usa, se retira en lugar de borrarla: los tickets guardados
+            // deben seguir mostrando su categoría en las consultas y en los informes.
+            $ids = $mainType->subcategories()->pluck('id')->push($mainType->id)->all();
+            $enUso = self::ticketsQueUsan($ids);
+
+            if ($enUso > 0) {
+                TipoMantenimiento::whereIn('id', $ids)->update(['activo' => 0]);
+
+                return ResponseFormatter::success(null, "La categoría se retiró y ya no aparecerá al crear tickets. No se eliminó porque {$enUso} ticket(s) la tienen registrada.");
+            }
+
             $mainType->delete();
 
             return ResponseFormatter::success(null, 'Tipo de mantenimiento eliminado correctamente');
