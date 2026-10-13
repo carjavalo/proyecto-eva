@@ -3000,7 +3000,8 @@ class EquipmentController extends ApiController
                     DB::raw("(SELECT COUNT(*) FROM ordenes WHERE equipo_id = equipos.id) as cuenta_tickets"),
                     
                     // Información adicional (7 columnas)
-                    DB::raw("COALESCE(sedes_equipo.name, sedes.name, 'N/A') as zona"),
+                    DB::raw("COALESCE(sedes_equipo.name, sedes.name, 'N/A') as sede_equipo"),
+                    DB::raw("COALESCE(zonas.name, 'N/A') as zona"),
                     DB::raw("(SELECT GROUP_CONCAT(CONCAT(name, ' - ', telefono) SEPARATOR '; ') FROM contacto WHERE id IN (SELECT contacto_id FROM equipo_contacto WHERE equipo_id = equipos.id)) as informacion_contacto"),
                     'equipos.file',
                     'equipos.repuesto_pendiente',
@@ -3012,6 +3013,7 @@ class EquipmentController extends ApiController
                 ->leftJoin('areas', 'equipos.area_id', '=', 'areas.id')
                 ->leftJoin('sedes', 'servicios.sede_id', '=', 'sedes.id')
                 ->leftJoin('sedes as sedes_equipo', 'sedes_equipo.id', '=', 'equipos.sede_id')
+                ->leftJoin('zonas', 'servicios.zona_id', '=', 'zonas.id')
                 ->leftJoin('estadoequipos', 'equipos.estadoequipo_id', '=', 'estadoequipos.id')
                 ->leftJoin('frecuenciam', 'equipos.frecuencia_id', '=', 'frecuenciam.id')
                 ->leftJoin('ordenes_compra', 'equipos.orden_compra_id', '=', 'ordenes_compra.id')
@@ -3162,8 +3164,9 @@ class EquipmentController extends ApiController
                 'AP1' => 'Cuenta Correctivos', 'AQ1' => 'Cuenta Tickets',
                 
                 // Adicionales (7)
-                'AR1' => 'Zona', 'AS1' => 'Info Contacto', 'AT1' => 'Archivo Excel cargado de Hoja de vida', 
-                'AU1' => 'Repuesto Pendiente', 'AV1' => 'Vida Útil', 'AW1' => 'Tiene Guía', 'AX1' => 'Manual URL'
+                'AR1' => 'Sede', 'AS1' => 'Info Contacto', 'AT1' => 'Archivo Excel cargado de Hoja de vida', 
+                'AU1' => 'Repuesto Pendiente', 'AV1' => 'Vida Útil', 'AW1' => 'Tiene Guía', 'AX1' => 'Manual URL',
+                'AY1' => 'Zona'
             ];
 
             foreach ($headers as $cell => $header) {
@@ -3221,13 +3224,14 @@ class EquipmentController extends ApiController
                 $sheet->setCellValue('AO' . $row, $equipo->descripcion_correctivo);
                 $sheet->setCellValue('AP' . $row, $equipo->cuenta_correctivos);
                 $sheet->setCellValue('AQ' . $row, $equipo->cuenta_tickets);
-                $sheet->setCellValue('AR' . $row, $equipo->zona);
+                $sheet->setCellValue('AR' . $row, $equipo->sede_equipo);
                 $sheet->setCellValue('AS' . $row, $equipo->informacion_contacto);
                 $sheet->setCellValue('AT' . $row, $equipo->file);
                 $sheet->setCellValue('AU' . $row, $equipo->repuesto_pendiente);
                 $sheet->setCellValue('AV' . $row, $equipo->vida_util);
                 $sheet->setCellValue('AW' . $row, $equipo->tiene_guia);
                 $sheet->setCellValue('AX' . $row, $equipo->manual_url);
+                $sheet->setCellValue('AY' . $row, $equipo->zona);
                 $row++;
             }
 
@@ -3235,7 +3239,7 @@ class EquipmentController extends ApiController
             foreach (range('A', 'Z') as $column) {
                 $sheet->getColumnDimension($column)->setAutoSize(true);
             }
-            foreach (range('A', 'X') as $letter) {
+            foreach (range('A', 'Y') as $letter) {
                 $sheet->getColumnDimension('A' . $letter)->setAutoSize(true);
             }
 
