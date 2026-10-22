@@ -4937,20 +4937,58 @@ Route::prefix('v1')->withoutMiddleware(['auth:sanctum'])->group(function () {
     
     // TEMPORAL - Usuario management sin autenticación para testing - FUNCIONAL
     Route::put('usuarios/{id}', function(Request $request, $id) {
-        // Actualización directa usando el patrón que funciona en el proyecto
+        $usuario = DB::table('usuarios')->where('id', $id)->first();
+        if (!$usuario) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        // email y username son UNIQUE en la tabla usuarios, y el correo solo admite 100
+        // caracteres. Sin esta validacion el choque llegaba crudo a MySQL (error 1062 / 1406)
+        // y la peticion moria con un 500 sin mensaje: el usuario solo veia "Internal Server Error".
+        $validador = Validator::make($request->all(), [
+            'nombre' => 'nullable|string|max:100',
+            'apellido' => 'nullable|string|max:100',
+            'telefono' => 'nullable|string|max:20',
+            'email' => ['nullable', 'email', 'max:100', \Illuminate\Validation\Rule::unique('usuarios', 'email')->ignore($id)],
+            'username' => ['nullable', 'string', 'max:45', \Illuminate\Validation\Rule::unique('usuarios', 'username')->ignore($id)],
+            'password' => 'nullable|string|min:6',
+        ], [
+            'email.unique' => 'Ese correo ya esta registrado en otro usuario.',
+            'email.email' => 'El correo no tiene un formato valido.',
+            'email.max' => 'El correo no puede tener mas de 100 caracteres.',
+            'username.unique' => 'Ese nombre de usuario ya esta registrado en otro usuario.',
+            'username.max' => 'El nombre de usuario no puede tener mas de 45 caracteres.',
+            'nombre.max' => 'El nombre no puede tener mas de 100 caracteres.',
+            'apellido.max' => 'El apellido no puede tener mas de 100 caracteres.',
+            'telefono.max' => 'El telefono no puede tener mas de 20 caracteres.',
+            'password.min' => 'La contrasena debe tener al menos 6 caracteres.',
+        ]);
+
+        if ($validador->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validador->errors()->first(),
+                'errors' => $validador->errors(),
+            ], 422);
+        }
+
+        // Actualizacion directa usando el patron que funciona en el proyecto
         $updateData = [];
-        
+
         // Solo nombre por ahora
         if ($request->nombre) {
             $updateData['nombre'] = $request->nombre;
         }
-        
-        // Contraseña con el método exacto del proyecto
+
+        // Contrasena con el metodo exacto del proyecto
         if ($request->password) {
             $updateData['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
         }
-        
-        // Otros campos básicos
+
+        // Otros campos basicos
         if ($request->telefono) $updateData['telefono'] = $request->telefono;
         if ($request->email) $updateData['email'] = $request->email;
         if ($request->apellido) $updateData['apellido'] = $request->apellido;
@@ -4961,16 +4999,24 @@ Route::prefix('v1')->withoutMiddleware(['auth:sanctum'])->group(function () {
         if ($request->centro_id) $updateData['centro_id'] = $request->centro_id;
         if ($request->sede_id) $updateData['sede_id'] = $request->sede_id;
         if ($request->zona_id) $updateData['zona_id'] = $request->zona_id;
-        
-        if (!empty($updateData)) {
-            // Actualizar usando el patrón exitoso del proyecto
+        // El formulario de edicion manda id_empresa, pero aqui se descartaba: la empresa nunca se guardaba.
+        if ($request->id_empresa !== null) $updateData['id_empresa'] = $request->id_empresa;
+
+        if (empty($updateData)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay datos para actualizar'
+            ], 400);
+        }
+
+        try {
             DB::table('usuarios')->where('id', $id)->update($updateData);
-            
+
             // Gestionar permisos si se proporcionan
             if ($request->permisos && is_array($request->permisos)) {
                 // Eliminar permisos existentes
                 DB::table('acciones')->where('usuario_id', $id)->delete();
-                
+
                 // Insertar nuevos permisos
                 foreach ($request->permisos as $moduloId) {
                     DB::table('acciones')->insert([
@@ -4983,18 +5029,30 @@ Route::prefix('v1')->withoutMiddleware(['auth:sanctum'])->group(function () {
                     ]);
                 }
             }
-            
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Red de seguridad por si dos ediciones simultaneas pasan la validacion a la vez.
+            $campo = str_contains($e->getMessage(), 'email') ? 'correo' : 'nombre de usuario';
+            Log::warning("Choque de unicidad al actualizar usuario $id", ['error' => $e->getMessage()]);
             return response()->json([
-                'success' => true,
-                'message' => 'Usuario actualizado exitosamente',
-                'data' => ['user_id' => $id, 'updated_fields' => array_keys($updateData)]
+                'success' => false,
+                'message' => "Ese $campo ya esta registrado en otro usuario."
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error("Error actualizando usuario $id", [
+                'error' => $e->getMessage(),
+                'campos' => array_keys($updateData),
             ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo actualizar el usuario: ' . $e->getMessage()
+            ], 500);
         }
-        
+
         return response()->json([
-            'success' => false,
-            'message' => 'No hay datos para actualizar'
-        ], 400);
+            'success' => true,
+            'message' => 'Usuario actualizado exitosamente',
+            'data' => ['user_id' => $id, 'updated_fields' => array_keys($updateData)]
+        ]);
     });
     Route::get('usuarios/{id}', function($id) {
         try {

@@ -103,9 +103,15 @@ export const useUsuarios = () => {
           throw new Error(data.message || "Error al actualizar usuario");
         }
       } catch (err) {
+        // El backend responde 422 con el motivo real (correo repetido, formato, longitud).
+        // Sin esto axios solo deja "Request failed with status code 422" y el usuario no sabe que corregir.
+        const motivo =
+          err.response?.data?.message ||
+          Object.values(err.response?.data?.errors || {})[0]?.[0] ||
+          err.message;
         console.error("Error updating usuario:", err);
-        setError(err.message);
-        throw err;
+        setError(motivo);
+        throw new Error(motivo);
       } finally {
         setLoading(false);
       }
