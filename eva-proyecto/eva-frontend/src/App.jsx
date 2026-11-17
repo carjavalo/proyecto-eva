@@ -236,7 +236,7 @@ function AppContent() {
                 <Route
                   path="/equipos/contingencias"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="contingencias">
                       <ContingenciesView />
                     </ProtectedRoute>
                   }
@@ -244,7 +244,7 @@ function AppContent() {
                 <Route
                   path="/equipos/manuales"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="manuales">
                       <ManualesView />
                     </ProtectedRoute>
                   }
@@ -252,7 +252,7 @@ function AppContent() {
                 <Route
                   path="/equipos/biomedicos"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="equipos">
                       <MedicalDevicesView />
                     </ProtectedRoute>
                   }
@@ -260,7 +260,7 @@ function AppContent() {
                 <Route
                   path="/planes/preventivo"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="planes mantenimiento">
                       <PlanesMantenimientoView />
                     </ProtectedRoute>
                   }
@@ -268,7 +268,7 @@ function AppContent() {
                 <Route
                   path="/repuestos"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="repuestos">
                       <RepuestosView />
                     </ProtectedRoute>
                   }
@@ -276,7 +276,7 @@ function AppContent() {
                 <Route
                   path="/equipos/industriales"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="equipos industriales">
                       <IndustrialDevicesView />
                     </ProtectedRoute>
                   }
@@ -284,7 +284,7 @@ function AppContent() {
                 <Route
                   path="/equipos/bajas"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="bajas biomedicos">
                       <EquiposBajas />
                     </ProtectedRoute>
                   }
@@ -292,7 +292,7 @@ function AppContent() {
                 <Route
                   path="/equipos/guias-rapidas"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="guias rapidas">
                       <GuiasRapidas />
                     </ProtectedRoute>
                   }
@@ -308,7 +308,7 @@ function AppContent() {
                 <Route
                   path="/equipos/ordenes-compra"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="soportes compra">
                       <PurchaseOrdersView />
                     </ProtectedRoute>
                   }
@@ -317,7 +317,7 @@ function AppContent() {
                 <Route
                   path="/ordenes/mis-tickets"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="tickets propios">
                       <MyTickets />
                     </ProtectedRoute>
                   }
@@ -325,7 +325,7 @@ function AppContent() {
                 <Route
                   path="/ordenes/tickets-cerrados"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="tickets cerrados">
                       <ClosedTickets />
                     </ProtectedRoute>
                   }
@@ -333,7 +333,7 @@ function AppContent() {
                 <Route
                   path="/ordenes/gestion-tickets"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="tickets activos">
                       <GestionTickets />
                     </ProtectedRoute>
                   }
@@ -349,7 +349,7 @@ function AppContent() {
                 <Route
                   path="/dashboard/reportes"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="reportes">
                       <DashboardUnificado />
                     </ProtectedRoute>
                   }
@@ -357,7 +357,7 @@ function AppContent() {
                 <Route
                   path="/config/contactos"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="contactos">
                       <ContactsView />
                     </ProtectedRoute>
                   }
@@ -373,7 +373,7 @@ function AppContent() {
                 <Route
                   path="/config/areas"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="areas">
                       <VistaAreasPrincipal />
                     </ProtectedRoute>
                   }
@@ -381,7 +381,7 @@ function AppContent() {
                 <Route
                   path="/admin/propietarios"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="propietarios">
                       <AdminRoute>
                         <VistaPropietariosPrincipal />
                       </AdminRoute>
@@ -391,7 +391,7 @@ function AppContent() {
                 <Route
                   path="/admin/usuarios"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="usuarios">
                       <AdminRoute>
                         <Usuarios />
                       </AdminRoute>
@@ -411,7 +411,7 @@ function AppContent() {
                 <Route
                   path="/config/servicios"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="servicios">
                       <VistaServiciosPrincipal />
                     </ProtectedRoute>
                   }
@@ -449,7 +449,7 @@ function AppContent() {
                 <Route
                   path="/capacitaciones"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute modulo="capacitaciones">
                       <CapacitacionesView />
                     </ProtectedRoute>
                   }

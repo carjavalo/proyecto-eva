@@ -1143,6 +1143,33 @@ export default function Usuarios() {
       }
 
       await updateUsuario(selectedUser.id, userData);
+
+      // Los permisos marcados en el panel se guardaban solo con "Guardar Permisos
+      // Individuales"; si se pulsaba "Actualizar" se perdían sin avisar. Ahora el botón
+      // de guardar el usuario arrastra también los permisos.
+      if (userPermissions.length > 0) {
+        try {
+          await updateUserPermissions(
+            selectedUser.id,
+            userPermissions.map((permiso) => ({
+              modulo_id: permiso.modulo_id,
+              leer: permiso.leer ? 1 : 0,
+              insertar: permiso.insertar ? 1 : 0,
+              editar: permiso.editar ? 1 : 0,
+              eliminar: permiso.eliminar ? 1 : 0,
+            }))
+          );
+        } catch (errorPermisos) {
+          // El usuario sí se guardó; solo fallaron los permisos (p. ej. 403 si quien
+          // edita no es superadministrador). Se avisa sin tumbar el guardado.
+          console.error("Error guardando permisos:", errorPermisos);
+          toast.warning(
+            "El usuario se actualizó, pero los permisos no se guardaron: " +
+              (errorPermisos.response?.data?.message || errorPermisos.message)
+          );
+        }
+      }
+
       setIsEditUserModalOpen(false);
     } catch (error) {
       console.error("Error actualizando usuario:", error);

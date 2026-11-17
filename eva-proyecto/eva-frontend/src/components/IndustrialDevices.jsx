@@ -80,8 +80,6 @@ import { EquipmentIdBadge } from "./ui/equipment-id-badge";
 import { API_CONFIG } from "@/config/api";
 
 function IndustrialDevices() {
-  const { user } = useAuth();
-  const isBasicUser = user && parseInt(user.rol_id) === 4;
   
   // Hook para gestión de equipos industriales
   const {
@@ -451,20 +449,6 @@ function IndustrialDevices() {
     }
   };
 
-  if (isBasicUser) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl border border-red-200 p-8 max-w-md text-center">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">ACCESO BLOQUEADO</h2>
-          <Badge className="bg-red-100 text-red-800 mb-4 hover:bg-red-200">USUARIO BÁSICO</Badge>
-          <p className="text-slate-600 mb-6">
-            Su perfil no tiene permisos para visualizar o interactuar con el panel principal de equipos industriales.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#F1F4F6] from-[#F1F4F6] to-[#1d293d]/5 p-2 sm:p-4 lg:p-6">

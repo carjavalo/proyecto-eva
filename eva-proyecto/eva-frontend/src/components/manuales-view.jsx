@@ -101,7 +101,7 @@ export function ManualesView() {
     // Función para obtener icono de ordenamiento
     const getSortIcon = (field) => {
         if (sortField !== field) {
-            return <ArrowUpDown className="w-4 h-4 text-slate-400" />
+            return <ArrowUpDown className="w-4 h-4 text-[#5E6A82]" />
         }
         return sortDirection === 'asc' 
             ? <ArrowUp className="w-4 h-4 text-[#1d293d]" />
@@ -139,20 +139,20 @@ export function ManualesView() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#1d293d]/5 via-indigo-50 to-purple-50">
+        <div className="min-h-screen bg-[#F6F8FB]">
             {/* Header Refinado */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 mx-6 mt-6 p-6">
+            <div className="bg-white rounded-[18px] border border-[#E2E7EE] mx-6 mt-6 p-5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-[#1d293d]/10 rounded-lg">
-                            <BookOpen className="w-6 h-6 text-[#1d293d]" />
+                        <div className="p-2.5 bg-[#EEF3FF] rounded-[10px]">
+                            <BookOpen className="w-5 h-5 text-[#2A377E]" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900">Gestión de Manuales</h1>
-                            <p className="text-slate-600">Administra los manuales de equipos del sistema</p>
+                            <h1 className="text-[22px] font-semibold tracking-tight text-[#1B2335]">Gestión de Manuales</h1>
+                            <p className="text-[13.5px] text-[#5E6A82]">Administra los manuales de equipos del sistema</p>
                         </div>
                     </div>
-                    <Badge variant="secondary" className="bg-[#1d293d]/5 text-[#1d293d] border-[#1d293d]/30">
+                    <Badge variant="secondary" className="rounded-md border-transparent bg-[#EEF3FF] font-semibold text-[#2A377E]">
                         {totalItems} manuales registrados
                     </Badge>
                 </div>
@@ -160,21 +160,21 @@ export function ManualesView() {
 
             {/* Controles */}
             <div className="mx-6 mt-6">
-                <Card className="bg-white shadow-sm border-slate-200">
-                    <CardContent className="p-6">
+                <Card className="bg-white border-[#E2E7EE] rounded-[18px] shadow-none">
+                    <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                             <div className="relative flex-1 max-w-md">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#5E6A82] w-4 h-4" />
                                 <Input
                                     placeholder="Buscar por descripción o URL..."
                                     value={searchTerm}
                                     onChange={(e) => handleSearch(e.target.value)}
-                                    className="pl-10 bg-slate-50 border-slate-200 focus:border-[#1d293d] focus:ring-[#1d293d]/20"
+                                    className="pl-10 bg-white border-[#D5DCE6] rounded-[10px] focus:border-[#2A377E] focus:ring-[#2A377E]/20"
                                 />
                             </div>
                             <Button
                                 onClick={() => setAddModalOpen(true)}
-                                className="bg-gradient-to-r from-[#1d293d] to-[#2a3b52] hover:from-[#2a3b52] hover:to-[#141d2b] text-white shadow-lg"
+                                className="bg-[#1D293D] hover:bg-[#2A3B52] text-white rounded-[10px]"
                             >
                                 <Plus className="w-4 h-4 mr-2" />
                                 Nuevo Manual
@@ -185,21 +185,21 @@ export function ManualesView() {
             </div>
 
             {/* Tabla Mejorada */}
-            <div className="mx-6 mt-6">
-                <Card className="bg-white shadow-sm border-slate-200">
+            <div className={`mx-6 mt-6 ${!loading && manuales.length > 0 ? "hidden lg:block" : ""}`}>
+                <Card className="bg-white border-[#E2E7EE] rounded-[18px] overflow-hidden shadow-none">
                     <CardContent className="p-0">
                         {loading ? (
                             <div className="flex items-center justify-center py-12">
                                 <div className="text-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1d293d] mx-auto mb-4"></div>
-                                    <p className="text-slate-600">Cargando manuales...</p>
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1D293D] mx-auto mb-4"></div>
+                                    <p className="text-[#5E6A82]">Cargando manuales...</p>
                                 </div>
                             </div>
                         ) : manuales.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
-                                <AlertCircle className="w-12 h-12 text-slate-400 mb-4" />
-                                <h3 className="text-lg font-semibold text-slate-700 mb-2">No se encontraron manuales</h3>
-                                <p className="text-slate-500 mb-4">
+                                <AlertCircle className="w-12 h-12 text-[#B9C4D4] mb-4" />
+                                <h3 className="text-lg font-semibold text-[#1B2335] mb-2">No se encontraron manuales</h3>
+                                <p className="text-[#5E6A82] mb-4">
                                     {searchTerm ? 'No hay manuales que coincidan con tu búsqueda' : 'No hay manuales registrados en el sistema'}
                                 </p>
                                 {!searchTerm && (
@@ -213,8 +213,8 @@ export function ManualesView() {
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="bg-slate-50 border-slate-200">
-                                            <th className="text-left p-4 font-semibold text-slate-700">
+                                        <tr className="bg-[#FBFCFE] border-b border-[#E2E7EE]">
+                                            <th className="text-left px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                                                 <button 
                                                     onClick={() => handleSort('id')}
                                                     className="flex items-center gap-2 hover:text-[#1d293d] transition-colors"
@@ -223,7 +223,7 @@ export function ManualesView() {
                                                     {getSortIcon('id')}
                                                 </button>
                                             </th>
-                                            <th className="text-left p-4 font-semibold text-slate-700">
+                                            <th className="text-left px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                                                 <button 
                                                     onClick={() => handleSort('descripcion')}
                                                     className="flex items-center gap-2 hover:text-[#1d293d] transition-colors"
@@ -232,7 +232,7 @@ export function ManualesView() {
                                                     {getSortIcon('descripcion')}
                                                 </button>
                                             </th>
-                                            <th className="text-left p-4 font-semibold text-slate-700">
+                                            <th className="text-left px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                                                 <button 
                                                     onClick={() => handleSort('url')}
                                                     className="flex items-center gap-2 hover:text-[#1d293d] transition-colors"
@@ -241,21 +241,21 @@ export function ManualesView() {
                                                     {getSortIcon('url')}
                                                 </button>
                                             </th>
-                                            <th className="text-center p-4 font-semibold text-slate-700">Acciones</th>
+                                            <th className="text-right px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {sortedManuales.map((manual) => (
-                                            <tr key={manual.id} className="hover:bg-slate-50 transition-colors border-slate-100 border-b">
-                                                <td className="p-4">
-                                                    <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-300">
-                                                        #{manual.id}
-                                                    </Badge>
+                                            <tr key={manual.id} className="hover:bg-[#F6F8FB] transition-colors border-b border-[#EEF1F6] last:border-0">
+                                                <td className="px-5 py-3.5">
+                                                    <span className="font-mono text-[12px] tabular-nums text-[#5E6A82]">
+                                                        {manual.id}
+                                                    </span>
                                                 </td>
-                                                <td className="p-4 text-slate-700 font-medium">{manual.descripcion}</td>
-                                                <td className="p-4 max-w-md">
+                                                <td className="px-5 py-3.5 font-medium text-[#1B2335]">{manual.descripcion}</td>
+                                                <td className="px-5 py-3.5 max-w-md">
                                                     <div className="flex items-center space-x-2">
-                                                        <span className="text-slate-600 truncate font-mono text-sm bg-slate-50 px-2 py-1 rounded">
+                                                        <span className="truncate font-mono text-[12px] text-[#2A377E]">
                                                             {manual.url}
                                                         </span>
                                                         <Button
@@ -268,8 +268,8 @@ export function ManualesView() {
                                                         </Button>
                                                     </div>
                                                 </td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center justify-center space-x-2">
+                                                <td className="px-5 py-3.5">
+                                                    <div className="flex items-center justify-end space-x-2">
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -301,24 +301,44 @@ export function ManualesView() {
             {/* Cards Móviles */}
             {!loading && manuales.length > 0 && (
                 <div className="lg:hidden mx-6 mt-6 space-y-4">
-                    {manuales.map((manual) => (
-                        <Card key={manual.id} className="shadow-sm border-slate-200">
+                    <Select
+                        value={`${sortField}:${sortDirection}`}
+                        onValueChange={(v) => {
+                            const [campo, direccion] = v.split(":")
+                            setSortField(campo)
+                            setSortDirection(direccion)
+                        }}
+                    >
+                        <SelectTrigger className="h-10 w-full rounded-[10px] border-[#D5DCE6] bg-white text-[13px] text-[#3D4A63]">
+                            <SelectValue placeholder="Ordenar por" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="id:asc">ID ascendente</SelectItem>
+                            <SelectItem value="id:desc">ID descendente</SelectItem>
+                            <SelectItem value="descripcion:asc">Descripción A-Z</SelectItem>
+                            <SelectItem value="descripcion:desc">Descripción Z-A</SelectItem>
+                            <SelectItem value="url:asc">Archivo A-Z</SelectItem>
+                            <SelectItem value="url:desc">Archivo Z-A</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {sortedManuales.map((manual) => (
+                        <Card key={manual.id} className="border-[#E2E7EE] rounded-[14px] shadow-none">
                             <CardContent className="p-4">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1">
-                                        <Badge variant="outline" className="text-xs mb-2 bg-slate-50 text-slate-600 border-slate-300">
-                                            #{manual.id}
-                                        </Badge>
-                                        <h3 className="font-medium text-slate-900 mb-3">{manual.descripcion}</h3>
+                                        <span className="mb-2 block font-mono text-[12px] tabular-nums text-[#5E6A82]">
+                                            {manual.id}
+                                        </span>
+                                        <h3 className="font-medium text-[#1B2335] mb-3">{manual.descripcion}</h3>
                                         <div className="flex items-center space-x-2 mb-2">
-                                            <span className="text-slate-600 truncate font-mono text-xs bg-slate-50 px-2 py-1 rounded">
+                                            <span className="truncate font-mono text-xs text-[#2A377E]">
                                                 {manual.url}
                                             </span>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => handleViewUrl(manual.url)}
-                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-1"
+                                                className="text-[#2A377E] hover:text-[#1D293D] hover:bg-[#EEF3FF] p-1"
                                             >
                                                 <ExternalLink className="w-3 h-3" />
                                             </Button>
@@ -351,7 +371,7 @@ export function ManualesView() {
 
             {/* Paginación Global */}
             {!loading && manuales.length > 0 && (
-                <div className="flex justify-center mx-6 mt-6 mb-6">
+                <div className="mx-6 mt-6 mb-6 overflow-hidden rounded-[18px] border border-[#E2E7EE] bg-white [&>div]:border-t-0 [&>div]:bg-transparent">
                     <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}

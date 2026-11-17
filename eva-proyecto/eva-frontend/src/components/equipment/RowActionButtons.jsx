@@ -80,22 +80,19 @@ export const RowActionButtons = memo(function RowActionButtons({
   };
 
   const tooltips = getTooltips();
-  const { canEdit, canDelete, user } = useAuth();
+  const { canEdit, canDelete } = useAuth();
 
   const moduleName = equipmentType === "industrial" ? "equipos industriales" : "equipos";
 
   // Validar si es Usuario Básico (por lo general rol_id 4)
-  const isBasicUser = user && parseInt(user.rol_id) === 4;
 
   return (
     <div className=" w-full h-full flex flex-col gap-2 items-center justify-center xs:gap-1">
       {/* View Button */}
       <ActionTip label={tooltips.view}>
         <Button
-          size="sm"
-          disabled={isBasicUser}
-          className={`bg-cyan-50 hover:bg-cyan-100 text-cyan-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${isBasicUser ? 'opacity-50 cursor-not-allowed hidden' : ''
-            }`}
+          size="sm"
+          className={`bg-cyan-50 hover:bg-cyan-100 text-cyan-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0`}
           onClick={() => onViewClick(equipment)}
         >
           <Eye className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4" />
@@ -106,8 +103,8 @@ export const RowActionButtons = memo(function RowActionButtons({
       <ActionTip label={tooltips.edit}>
         <Button
           size="sm"
-          disabled={!canEdit(moduleName) || isBasicUser}
-          className={`bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${(!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+          disabled={!canEdit(moduleName)}
+          className={`bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${!canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
             }`}
           onClick={() => onEditClick(equipment)}
         >
@@ -118,10 +115,8 @@ export const RowActionButtons = memo(function RowActionButtons({
       {/* Documents Button */}
       <ActionTip label={tooltips.documents}>
         <Button
-          size="sm"
-          disabled={isBasicUser}
-          className={`bg-pink-50 hover:bg-purple-100 text-purple-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${isBasicUser ? 'opacity-50 cursor-not-allowed hidden' : ''
-            }`}
+          size="sm"
+          className={`bg-pink-50 hover:bg-purple-100 text-purple-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0`}
           onClick={() => onDocumentsClick(equipment)}
         >
           <FileText className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4" />
@@ -132,8 +127,8 @@ export const RowActionButtons = memo(function RowActionButtons({
       <ActionTip label={tooltips.upload}>
         <Button
           size="sm"
-          disabled={!canEdit(moduleName) || isBasicUser}
-          className={`bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${(!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+          disabled={!canEdit(moduleName)}
+          className={`bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${!canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
             }`}
           onClick={() => onUploadClick(equipment)}
         >
@@ -145,10 +140,8 @@ export const RowActionButtons = memo(function RowActionButtons({
       {onContingenciasClick && (
         <ActionTip label={tooltips.contingencias}>
           <Button
-            size="sm"
-            disabled={isBasicUser}
-            className={`bg-red-600 hover:bg-red-700 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${isBasicUser ? 'opacity-50 cursor-not-allowed hidden' : ''
-              }`}
+            size="sm"
+            className={`bg-red-600 hover:bg-red-700 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0`}
             onClick={() => onContingenciasClick(equipment)}
           >
             <AlertTriangle className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4" />
@@ -160,10 +153,8 @@ export const RowActionButtons = memo(function RowActionButtons({
       {onMovimientosClick && (
         <ActionTip label={tooltips.movimientos}>
           <Button
-            size="sm"
-            disabled={isBasicUser}
-            className={`bg-indigo-500 hover:bg-indigo-600 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${isBasicUser ? 'opacity-50 cursor-not-allowed hidden' : ''
-              }`}
+            size="sm"
+            className={`bg-indigo-500 hover:bg-indigo-600 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0`}
             onClick={() => onMovimientosClick(equipment)}
           >
             <FileStack className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4" />
@@ -175,10 +166,8 @@ export const RowActionButtons = memo(function RowActionButtons({
       {onCapacitacionesClick && (
         <ActionTip label={tooltips.capacitaciones}>
           <Button
-            size="sm"
-            disabled={isBasicUser}
-            className={`bg-teal-500 hover:bg-teal-600 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${isBasicUser ? 'opacity-50 cursor-not-allowed hidden' : ''
-              }`}
+            size="sm"
+            className={`bg-teal-500 hover:bg-teal-600 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0`}
             onClick={() => onCapacitacionesClick(equipment)}
           >
             <FileText className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4" />
@@ -191,8 +180,8 @@ export const RowActionButtons = memo(function RowActionButtons({
         <ActionTip label={tooltips.copy}>
           <Button
             size="sm"
-            disabled={!canEdit(moduleName) || isBasicUser}
-            className={`bg-green-500 hover:bg-green-600 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${(!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+            disabled={!canEdit(moduleName)}
+            className={`bg-green-500 hover:bg-green-600 text-white h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${!canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
               }`}
             onClick={() => onCopyClick(equipment)}
           >
@@ -206,8 +195,8 @@ export const RowActionButtons = memo(function RowActionButtons({
         <ActionTip label={tooltips.decommission}>
           <Button
             size="sm"
-            disabled={!canEdit(moduleName) || isBasicUser}
-            className={`bg-yellow-50 hover:bg-yellow-100 text-yellow-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${(!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+            disabled={!canEdit(moduleName)}
+            className={`bg-yellow-50 hover:bg-yellow-100 text-yellow-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${!canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
               }`}
             onClick={() => onDecommissionClick(equipment)}
           >
@@ -221,8 +210,8 @@ export const RowActionButtons = memo(function RowActionButtons({
         <ActionTip label={tooltips.migrateType}>
           <Button
             size="sm"
-            disabled={!canEdit(moduleName) || isBasicUser}
-            className={`bg-violet-50 hover:bg-violet-100 text-violet-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${(!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+            disabled={!canEdit(moduleName)}
+            className={`bg-violet-50 hover:bg-violet-100 text-violet-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${!canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
               }`}
             onClick={() => onMigrateTypeClick(equipment)}
           >
@@ -235,8 +224,8 @@ export const RowActionButtons = memo(function RowActionButtons({
       <ActionTip label={tooltips.delete}>
         <Button
           size="sm"
-          disabled={!canDelete(moduleName) || isBasicUser}
-          className={`bg-red-50 hover:bg-red-100 text-red-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${(!canDelete(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+          disabled={!canDelete(moduleName)}
+          className={`bg-red-50 hover:bg-red-100 text-red-600 rounded-sm transition-all w-8 h-8 xs:h-7 xs:w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 p-0 ${!canDelete(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
             }`}
           onClick={() => onDeleteClick(equipment)}
         >

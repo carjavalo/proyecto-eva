@@ -1063,7 +1063,7 @@ export function ViewEquipmentModal({
                       <td className="border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-800 w-1/4">Reg. INVIMA</td>
                       <td className="border border-gray-200 px-3 py-2 text-sm">
                         <div className="flex items-center gap-2">
-                          <span>{safeValue(displayData.invima || displayData.numero_invima || displayData.registro_sanitario_invima)}</span>
+                          <span>{safeValue(displayData.registro_sanitario_invima || displayData.invima_numero_registro || displayData.numero_invima || displayData.invima)}</span>
                           {(displayData.invima_archivo || displayData.archivo_registro_sanitario) && (
                             <button
                               type="button"
@@ -1235,6 +1235,61 @@ export function ViewEquipmentModal({
                       <tr>
                         <td colSpan={4} className="border border-gray-200 px-3 py-4 text-center italic text-gray-500">
                           No hay calibraciones registradas
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* REPUESTOS INSTALADOS - ESTILO TABULAR EXCEL */}
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white px-4 py-2 mb-0" style={{backgroundColor: '#1d293d'}}>
+                REPUESTOS INSTALADOS
+              </h3>
+              <div className="border border-gray-300">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 text-left">Repuesto</th>
+                      <th className="border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 text-center">Cantidad</th>
+                      <th className="border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 text-left">Fecha</th>
+                      <th className="border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 text-left">Observación</th>
+                      <th className="border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 text-center">Archivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayData.repuestos && displayData.repuestos.length > 0 ? (
+                      displayData.repuestos.map((rep, index) => (
+                        <tr key={index}>
+                          <td className="border border-gray-200 px-3 py-2 text-sm font-medium text-gray-800">{safeValue(rep.repuesto_name)}</td>
+                          <td className="border border-gray-200 px-3 py-2 text-sm text-center">{safeValue(rep.cantidad_entregada)}</td>
+                          <td className="border border-gray-200 px-3 py-2 text-sm">{formatDate(rep.fecha)}</td>
+                          <td className="border border-gray-200 px-3 py-2 text-sm">{safeValue(rep.observacion)}</td>
+                          <td className="border border-gray-200 px-3 py-2 text-center">
+                            {rep.file ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.146:8001'}/storage/equipos/repuestos/${rep.file.split('/').pop()}`, '_blank')}
+                                className="text-blue-600 hover:bg-blue-100 h-7 px-2"
+                                title="Ver soporte del repuesto"
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                Ver
+                              </Button>
+                            ) : (
+                              <span className="text-gray-400 text-xs">Sin archivo</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="border border-gray-200 px-3 py-4 text-center italic text-gray-500">
+                          No hay repuestos instalados registrados
                         </td>
                       </tr>
                     )}

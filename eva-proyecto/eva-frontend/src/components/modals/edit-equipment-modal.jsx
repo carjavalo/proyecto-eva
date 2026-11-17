@@ -2411,33 +2411,45 @@ export function EditEquipmentModal({
 
                       <div className="space-y-3">
                         {/* Registro seleccionado actualmente */}
-                        {formData.invima ? (
-                          <div className="flex items-start gap-2 p-2 bg-blue-100 border border-blue-300 rounded-lg">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-blue-900 truncate">{formData.invima}</p>
-                              {(() => {
-                                const reg = registrosInvima.find(r => r.numero_registro === formData.invima);
-                                return reg ? (
+                        {formData.invima ? (() => {
+                          // Solo es una "selección" si el texto corresponde a un registro del
+                          // catálogo. Si no, es el valor heredado del equipo: se muestra como
+                          // respaldo, pero sin el PDF ni el botón de limpiar, para no borrarlo
+                          // por accidente.
+                          const reg = registrosInvima.find(r => r.numero_registro === formData.invima);
+                          return (
+                            <div className={`flex items-start gap-2 p-2 rounded-lg border ${reg ? "bg-blue-100 border-blue-300" : "bg-amber-50 border-amber-300"}`}>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-xs font-semibold truncate ${reg ? "text-blue-900" : "text-amber-900"}`}>{formData.invima}</p>
+                                {reg ? (
                                   <p className="text-xs text-blue-700 truncate">{reg.nombre_equipo} — {reg.fabricante}</p>
-                                ) : null;
-                              })()}
+                                ) : (
+                                  <p className="text-xs leading-snug text-amber-700">
+                                    Valor heredado del equipo: no está vinculado a ningún registro del
+                                    catálogo INVIMA, por eso no hay documento que consultar. Búscalo abajo
+                                    para vincularlo.
+                                  </p>
+                                )}
+                              </div>
+                              {reg && (
+                                <div className="flex gap-1 shrink-0">
+                                  <Button size="sm" type="button" onClick={viewInvimaDocument}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white h-6 w-6 p-0"
+                                    title="Ver documento PDF"
+                                    disabled={isSubmitting || loading}>
+                                    <FileText className="h-3 w-3" />
+                                  </Button>
+                                  <Button size="sm" type="button" onClick={clearInvimaSelection}
+                                    className="bg-red-500 hover:bg-red-600 text-white h-6 w-6 p-0"
+                                    title="Limpiar selección"
+                                    disabled={isSubmitting || loading}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Button size="sm" type="button" onClick={viewInvimaDocument}
-                                className="bg-blue-600 hover:bg-blue-700 text-white h-6 w-6 p-0"
-                                title="Ver documento PDF"
-                                disabled={isSubmitting || loading}>
-                                <FileText className="h-3 w-3" />
-                              </Button>
-                              <Button size="sm" type="button" onClick={clearInvimaSelection}
-                                className="bg-red-500 hover:bg-red-600 text-white h-6 w-6 p-0"
-                                title="Limpiar selección"
-                                disabled={isSubmitting || loading}>
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ) : null}
+                          );
+                        })() : null}
 
                         {/* Campo de búsqueda + botón agregar (siempre visible) */}
                         <div>

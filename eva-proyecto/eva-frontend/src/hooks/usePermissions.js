@@ -96,16 +96,11 @@ export const usePermissions = () => {
       console.error('Error fetching modules:', err);
       setError(err.message);
       
-      // Fallback a módulos básicos
-      return [
-        { id: 1, name: 'equipos', descripcion: 'Gestión de Equipos' },
-        { id: 2, name: 'equipos industriales', descripcion: 'Equipos Industriales' },
-        { id: 3, name: 'tickets propios', descripcion: 'Tickets Propios' },
-        { id: 4, name: 'usuarios', descripcion: 'Gestión de Usuarios' },
-        { id: 5, name: 'contactos', descripcion: 'Contactos' },
-        { id: 6, name: 'guias rapidas', descripcion: 'Guías Rápidas' },
-        { id: 7, name: 'reportes', descripcion: 'Reportes' }
-      ];
+      // Sin fallback a propósito: la lista que había aquí tenía los ids cambiados
+      // (ponía 2 = "equipos industriales" cuando en la base 2 es "usuarios"), y como
+      // guardar permisos escribe por modulo_id, bastaba con que fallara esta petición
+      // para asignarle al usuario permisos sobre módulos que no eran.
+      return [];
     } finally {
       setLoading(false);
     }

@@ -119,33 +119,46 @@ const Sidebar = ({ isOpen }) => {
     return iconMap[moduleName?.toLowerCase()] || <FaCog />;
   };
 
-  // Obtener ruta basada en el nombre del módulo
-  const getModulePath = (moduleName) => {
-    const pathMap = {
-      'equipos': '/equipos',
-      'equipos industriales': '/equipos-industriales',
-      'usuarios': '/usuarios',
-      'servicios': '/servicios',
-      'areas': '/areas',
-      'tickets propios': '/mis-tickets',
-      'tickets activos': '/tickets-activos',
-      'tickets cerrados': '/tickets-cerrados',
-      'correctivos': '/correctivos-generales',
-      'preventivos': '/mantenimiento',
-      'calibraciones': '/calibracion',
-      'repuestos': '/repuestos',
-      'manuales': '/manuales',
-      'contactos': '/contactos',
-      'reportes': '/reportes',
-      'observaciones': '/observaciones',
-      'planes mantenimiento': '/planes-mantenimiento',
-      'guias rapidas': '/guias-rapidas',
-      'propietarios': '/propietarios',
-      'contingencias': '/contingencias',
-    };
-    
-    return pathMap[moduleName?.toLowerCase()] || `/${moduleName?.toLowerCase().replace(/\s+/g, '-')}`;
+  /**
+   * Ruta real de cada modulo de la tabla `modulos`, tomada de las rutas declaradas en App.jsx.
+   * Un modulo que devuelve null es un permiso sin pagina propia (gobierna datos que se ven
+   * dentro de otra pantalla, como "equipo archivos" o "invimas"): no se pinta en el menu,
+   * porque antes se generaba un enlace inventado que llevaba a una pantalla en blanco.
+   */
+  const RUTAS_POR_MODULO = {
+    'equipos': '/equipos/biomedicos',
+    'equipos industriales': '/equipos/industriales',
+    'bajas biomedicos': '/equipos/bajas',
+    'manuales': '/equipos/manuales',
+    'guias rapidas': '/equipos/guias-rapidas',
+    'contingencias': '/equipos/contingencias',
+    'soportes compra': '/equipos/ordenes-compra',
+    'repuestos': '/repuestos',
+    'usuarios': '/admin/usuarios',
+    'propietarios': '/admin/propietarios',
+    'servicios': '/config/servicios',
+    'areas': '/config/areas',
+    'contactos': '/config/contactos',
+    'reportes': '/dashboard/reportes',
+    'planes mantenimiento': '/planes/preventivo',
+    'preventivos': '/planes/preventivo',
+    'tickets propios': '/ordenes/mis-tickets',
+    'tickets activos': '/ordenes/gestion-tickets',
+    'tickets cerrados': '/ordenes/tickets-cerrados',
+    'capacitaciones': '/capacitaciones',
+    'invimas': null,
+    'estado equipos': null,
+    'equipo archivos': null,
+    'observaciones': null,
+    'calibraciones': null,
+    'correctivos': null,
+    'repuestos instalados': null,
+    'equipos contactos': null,
+    'equipos especificaciones': null,
+    'equiposn': null,
   };
+
+  const getModulePath = (moduleName) => RUTAS_POR_MODULO[moduleName?.toLowerCase()] ?? null;
 
   // Verificar si el usuario tiene acceso al módulo
   const checkModuleAccess = (moduleName) => {
@@ -220,7 +233,7 @@ const Sidebar = ({ isOpen }) => {
       moduleName: "Materiales"
     },
     // Agregar módulos dinámicos de la BD
-    ...modules.map(module => {
+    ...modules.filter(module => getModulePath(module.name)).map(module => {
       console.log(`🔍 SIDEBAR: Procesando módulo "${module.name}"`);
       const hasAccess = checkModuleAccess(module.name);
       console.log(`🎯 SIDEBAR: Módulo "${module.name}" - acceso: ${hasAccess}`);

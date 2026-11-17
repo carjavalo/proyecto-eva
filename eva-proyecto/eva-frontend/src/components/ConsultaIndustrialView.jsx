@@ -142,18 +142,18 @@ const ConsultaIndustrialView = () => {
 
   const getEstadoBadge = (estado) => {
     const colorMap = {
-      Aprobado: "bg-green-100 text-green-800",
-      "En Proceso": "bg-yellow-100 text-yellow-800",
-      Pendiente: "bg-orange-100 text-orange-800",
-      Completada: "bg-green-100 text-green-800",
-      "En Progreso": "bg-[#1d293d]/10 text-[#1d293d]",
-      Programada: "bg-purple-100 text-purple-800",
+      Aprobado: "bg-[#E6F4ED] text-[#1C6B4B]",
+      "En Proceso": "bg-[#FFF4E0] text-[#B45309]",
+      Pendiente: "bg-[#FFF4E0] text-[#B45309]",
+      Completada: "bg-[#E6F4ED] text-[#1C6B4B]",
+      "En Progreso": "bg-[#EEF3FF] text-[#2A377E]",
+      Programada: "bg-[#EEF3FF] text-[#2A377E]",
     };
 
     return (
       <Badge
         className={`${
-          colorMap[estado] || "bg-gray-100 text-gray-800"
+          colorMap[estado] || "bg-[#EEF1F6] text-[#3D4A63]"
         } font-medium`}
       >
         {estado}
@@ -162,35 +162,35 @@ const ConsultaIndustrialView = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-[#F6F8FB] p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="bg-white rounded-[18px] border border-[#E2E7EE] p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-[22px] font-semibold tracking-tight text-[#1B2335]">
                 Consultas Industriales
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="mt-1 text-[13.5px] text-[#5E6A82]">
                 Gestión de consultas de adquisiciones e instalaciones de equipos
               </p>
             </div>
             <div className="flex items-center space-x-2">
-              <Search className="h-5 w-5 text-gray-500" />
-              <span className="text-sm text-gray-500">
+              <Search className="h-4 w-4 text-[#5E6A82]" />
+              <span className="text-[13px] text-[#5E6A82]">
                 Sistema de Consultas
               </span>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          <div className="flex overflow-hidden rounded-[10px] border border-[#D5DCE6]">
             <button
               onClick={() => setActiveTab("adquisiciones")}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "adquisiciones"
-                  ? "bg-white text-[#1d293d] shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-[#1D293D] text-white"
+                  : "bg-white text-[#5E6A82] hover:bg-[#F6F8FB] hover:text-[#1B2335]"
               }`}
             >
               <Package className="h-4 w-4 inline-block mr-2" />
@@ -198,10 +198,10 @@ const ConsultaIndustrialView = () => {
             </button>
             <button
               onClick={() => setActiveTab("instalaciones")}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 border-l border-[#D5DCE6] px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "instalaciones"
-                  ? "bg-white text-[#1d293d] shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-[#1D293D] text-white"
+                  : "bg-white text-[#5E6A82] hover:bg-[#F6F8FB] hover:text-[#1B2335]"
               }`}
             >
               <Settings className="h-4 w-4 inline-block mr-2" />
@@ -212,10 +212,10 @@ const ConsultaIndustrialView = () => {
 
         {/* Formulario de Consulta de Adquisiciones */}
         {activeTab === "adquisiciones" && (
-          <Card className="shadow-sm border-0">
-            <CardHeader className="bg-gradient-to-r from-[#1d293d]/5 to-[#1d293d]/10 border-b">
-              <CardTitle className="flex items-center text-xl text-gray-800">
-                <Package className="h-6 w-6 mr-2 text-[#1d293d]" />
+          <Card className="gap-0 overflow-hidden rounded-[18px] border border-[#E2E7EE] py-0 shadow-none">
+            <CardHeader className="border-b border-[#EEF1F6] bg-[#FBFCFE] py-4">
+              <CardTitle className="flex items-center text-[17px] font-semibold text-[#1B2335]">
+                <Package className="h-5 w-5 mr-2 text-[#2A377E]" />
                 Consulta de Adquisiciones de Equipos
               </CardTitle>
             </CardHeader>
@@ -224,7 +224,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="fecha-inicio-adq"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Calendar className="h-4 w-4 inline-block mr-1" />
                     Fecha Inicio
@@ -239,14 +239,14 @@ const ConsultaIndustrialView = () => {
                         fechaInicio: e.target.value,
                       })
                     }
-                    className="rounded-md border-gray-300 focus:ring-[#1d293d] focus:border-[#1d293d]"
+                    className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
                     htmlFor="fecha-fin-adq"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Calendar className="h-4 w-4 inline-block mr-1" />
                     Fecha Fin
@@ -261,14 +261,14 @@ const ConsultaIndustrialView = () => {
                         fechaFin: e.target.value,
                       })
                     }
-                    className="rounded-md border-gray-300 focus:ring-[#1d293d] focus:border-[#1d293d]"
+                    className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
                     htmlFor="proveedor-adq"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Building className="h-4 w-4 inline-block mr-1" />
                     Proveedor
@@ -282,7 +282,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-[#1d293d] focus:border-[#1d293d]">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar proveedor" />
                     </SelectTrigger>
                     <SelectContent>
@@ -301,7 +301,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="estado-adq"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <FileText className="h-4 w-4 inline-block mr-1" />
                     Estado
@@ -315,7 +315,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-[#1d293d] focus:border-[#1d293d]">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar estado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -330,7 +330,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="tipo-equipo-adq"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Settings className="h-4 w-4 inline-block mr-1" />
                     Tipo de Equipo
@@ -344,7 +344,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-[#1d293d] focus:border-[#1d293d]">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -359,7 +359,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="presupuesto-min"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <DollarSign className="h-4 w-4 inline-block mr-1" />
                     Presupuesto Mín.
@@ -375,14 +375,14 @@ const ConsultaIndustrialView = () => {
                         presupuestoMin: e.target.value,
                       })
                     }
-                    className="rounded-md border-gray-300 focus:ring-[#1d293d] focus:border-[#1d293d]"
+                    className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
                     htmlFor="presupuesto-max"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <DollarSign className="h-4 w-4 inline-block mr-1" />
                     Presupuesto Máx.
@@ -398,14 +398,14 @@ const ConsultaIndustrialView = () => {
                         presupuestoMax: e.target.value,
                       })
                     }
-                    className="rounded-md border-gray-300 focus:ring-[#1d293d] focus:border-[#1d293d]"
+                    className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]"
                   />
                 </div>
 
                 <div className="flex items-end">
                   <Button
                     onClick={handleAdquisicionSearch}
-                    className="w-full bg-[#1d293d] hover:bg-[#2a3b52] text-white"
+                    className="w-full rounded-[10px] bg-[#1D293D] hover:bg-[#2A3B52] text-white"
                   >
                     <Search className="h-4 w-4 mr-2" />
                     Buscar Adquisiciones
@@ -417,7 +417,7 @@ const ConsultaIndustrialView = () => {
               {adquisicionResults.length > 0 && (
                 <div className="mt-8">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-[15px] font-semibold text-[#1B2335]">
                       Resultados de Adquisiciones ({adquisicionResults.length})
                     </h3>
                     <Button variant="outline" className="text-sm">
@@ -426,39 +426,39 @@ const ConsultaIndustrialView = () => {
                     </Button>
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <div className="overflow-hidden rounded-[14px] border border-[#E2E7EE]">
                     <Table>
-                      <TableHeader className="bg-gray-50">
+                      <TableHeader className="bg-[#FBFCFE]">
                         <TableRow>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             ID
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Fecha Solicitud
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Proveedor
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Equipo
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Cantidad
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Presupuesto
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Estado
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Fecha Entrega
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {adquisicionResults.map((item) => (
-                          <TableRow key={item.id} className="hover:bg-gray-50">
+                          <TableRow key={item.id} className="hover:bg-[#F6F8FB]">
                             <TableCell className="font-medium">
                               {item.id}
                             </TableCell>
@@ -484,10 +484,10 @@ const ConsultaIndustrialView = () => {
 
         {/* Formulario de Consulta de Instalaciones */}
         {activeTab === "instalaciones" && (
-          <Card className="shadow-sm border-0">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
-              <CardTitle className="flex items-center text-xl text-gray-800">
-                <Settings className="h-6 w-6 mr-2 text-green-600" />
+          <Card className="gap-0 overflow-hidden rounded-[18px] border border-[#E2E7EE] py-0 shadow-none">
+            <CardHeader className="border-b border-[#EEF1F6] bg-[#FBFCFE] py-4">
+              <CardTitle className="flex items-center text-[17px] font-semibold text-[#1B2335]">
+                <Settings className="h-5 w-5 mr-2 text-[#2A377E]" />
                 Consulta de Instalaciones de Equipos
               </CardTitle>
             </CardHeader>
@@ -496,7 +496,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="fecha-inicio-ins"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Calendar className="h-4 w-4 inline-block mr-1" />
                     Fecha Inicio
@@ -511,14 +511,14 @@ const ConsultaIndustrialView = () => {
                         fechaInicio: e.target.value,
                       })
                     }
-                    className="rounded-md border-gray-300 focus:ring-green-500 focus:border-green-500"
+                    className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
                     htmlFor="fecha-fin-ins"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Calendar className="h-4 w-4 inline-block mr-1" />
                     Fecha Fin
@@ -533,14 +533,14 @@ const ConsultaIndustrialView = () => {
                         fechaFin: e.target.value,
                       })
                     }
-                    className="rounded-md border-gray-300 focus:ring-green-500 focus:border-green-500"
+                    className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
                     htmlFor="area-ins"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <MapPin className="h-4 w-4 inline-block mr-1" />
                     Área
@@ -554,7 +554,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-green-500 focus:border-green-500">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar área" />
                     </SelectTrigger>
                     <SelectContent>
@@ -570,7 +570,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="sede-ins"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Building className="h-4 w-4 inline-block mr-1" />
                     Sede
@@ -584,7 +584,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-green-500 focus:border-green-500">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar sede" />
                     </SelectTrigger>
                     <SelectContent>
@@ -601,7 +601,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="tecnico-ins"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Settings className="h-4 w-4 inline-block mr-1" />
                     Técnico
@@ -615,7 +615,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-green-500 focus:border-green-500">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar técnico" />
                     </SelectTrigger>
                     <SelectContent>
@@ -630,7 +630,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="tipo-instalacion"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Settings className="h-4 w-4 inline-block mr-1" />
                     Tipo Instalación
@@ -644,7 +644,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-green-500 focus:border-green-500">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -661,7 +661,7 @@ const ConsultaIndustrialView = () => {
                 <div className="space-y-2">
                   <Label
                     htmlFor="estado-ins"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-[12px] font-medium uppercase tracking-wide text-[#5E6A82]"
                   >
                     <Clock className="h-4 w-4 inline-block mr-1" />
                     Estado
@@ -675,7 +675,7 @@ const ConsultaIndustrialView = () => {
                       })
                     }
                   >
-                    <SelectTrigger className="rounded-md border-gray-300 focus:ring-green-500 focus:border-green-500">
+                    <SelectTrigger className="rounded-[10px] border-[#D5DCE6] focus:ring-[#2A377E]/20 focus:border-[#2A377E]">
                       <SelectValue placeholder="Seleccionar estado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -690,7 +690,7 @@ const ConsultaIndustrialView = () => {
                 <div className="flex items-end">
                   <Button
                     onClick={handleInstalacionSearch}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full rounded-[10px] bg-[#1D293D] hover:bg-[#2A3B52] text-white"
                   >
                     <Search className="h-4 w-4 mr-2" />
                     Buscar Instalaciones
@@ -702,7 +702,7 @@ const ConsultaIndustrialView = () => {
               {instalacionResults.length > 0 && (
                 <div className="mt-8">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-[15px] font-semibold text-[#1B2335]">
                       Resultados de Instalaciones ({instalacionResults.length})
                     </h3>
                     <Button variant="outline" className="text-sm">
@@ -711,39 +711,39 @@ const ConsultaIndustrialView = () => {
                     </Button>
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <div className="overflow-hidden rounded-[14px] border border-[#E2E7EE]">
                     <Table>
-                      <TableHeader className="bg-gray-50">
+                      <TableHeader className="bg-[#FBFCFE]">
                         <TableRow>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             ID
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Fecha Instalación
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Equipo
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Área
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Sede
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Técnico
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Estado
                           </TableHead>
-                          <TableHead className="font-semibold text-gray-900">
+                          <TableHead className="text-[11px] font-medium uppercase tracking-wider text-[#5E6A82]">
                             Tipo
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {instalacionResults.map((item) => (
-                          <TableRow key={item.id} className="hover:bg-gray-50">
+                          <TableRow key={item.id} className="hover:bg-[#F6F8FB]">
                             <TableCell className="font-medium">
                               {item.id}
                             </TableCell>

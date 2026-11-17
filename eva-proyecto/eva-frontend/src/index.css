@@ -339,3 +339,56 @@
    Sistema de diseño responsive adaptable
    ======================================== */
 @import "./styles/tablet-optimizations.css";
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Apertura del menú desplegable (el de perfil del Navbar).
+
+   Radix detecta el cierre por `animationend`, así que esto va con @keyframes y
+   no con transition: con transition el menú se desmontaría de golpe y la
+   salida no se vería.
+
+   Solo opacidad y un desplazamiento corto, ambos en el compositor, y por
+   debajo de 150 ms. Abre más rápido de lo que cierra: el foco se mueve al
+   abrir, así que una entrada lenta se siente como retraso.
+
+   El origen de la escala lo pone Radix en
+   --radix-dropdown-menu-content-transform-origin, ya aplicado en el
+   componente, para que crezca desde la esquina que toca el disparador.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot="dropdown-menu-content"][data-state="open"] {
+    animation: eva-menu-in 100ms ease-out both;
+  }
+  [data-slot="dropdown-menu-content"][data-state="closed"] {
+    animation: eva-menu-out 150ms ease-in both;
+  }
+  /* Si el menú se voltea hacia arriba, entra desde abajo. */
+  [data-slot="dropdown-menu-content"][data-side="top"][data-state="open"] {
+    animation-name: eva-menu-in-arriba;
+  }
+  [data-slot="dropdown-menu-content"][data-side="top"][data-state="closed"] {
+    animation-name: eva-menu-out-arriba;
+  }
+}
+
+@keyframes eva-menu-in {
+  from { opacity: 0; translate: 0 -0.25rem; }
+}
+@keyframes eva-menu-out {
+  to { opacity: 0; translate: 0 -0.25rem; }
+}
+@keyframes eva-menu-in-arriba {
+  from { opacity: 0; translate: 0 0.25rem; }
+}
+@keyframes eva-menu-out-arriba {
+  to { opacity: 0; translate: 0 0.25rem; }
+}
+
+/* El disparador acompaña: la flecha gira mientras el menú está abierto. */
+[data-slot="dropdown-menu-trigger"] > svg:last-child {
+  transition: rotate 150ms ease-out;
+}
+[data-slot="dropdown-menu-trigger"][data-state="open"] > svg:last-child {
+  rotate: 180deg;
+}

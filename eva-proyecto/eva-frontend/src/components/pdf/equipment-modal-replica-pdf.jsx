@@ -445,7 +445,7 @@ const EquipmentModalReplicaPDF = ({ data }) => {
         <View style={styles.table}>
           <View style={styles.tableRow}>
             <Text style={styles.tableCellHeader}>Reg. INVIMA</Text>
-            <Text style={styles.tableCellData}>{safeValue(data?.invima || data?.numero_invima || data?.invima_numero_registro || data?.registro_sanitario_invima)}</Text>
+            <Text style={styles.tableCellData}>{safeValue(data?.registro_sanitario_invima || data?.invima_numero_registro || data?.numero_invima || data?.invima)}</Text>
             <Text style={styles.tableCellHeader}>Estado INVIMA</Text>
             <Text style={styles.tableCellData}>{safeValue(data?.invima_estado || data?.estado_invima)}</Text>
           </View>
@@ -593,6 +593,39 @@ const EquipmentModalReplicaPDF = ({ data }) => {
             <View style={styles.dataTableRow}>
               <Text style={[styles.dataTableCell, { textAlign: 'center', fontStyle: 'italic', color: '#6b7280' }]}>
                 No hay calibraciones registradas
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* REPUESTOS INSTALADOS */}
+        <Text style={styles.sectionTitle}>REPUESTOS INSTALADOS</Text>
+        <View style={styles.dataTable}>
+          <View style={styles.dataTableHeader}>
+            <Text style={styles.dataTableHeaderCell}>Fecha</Text>
+            <Text style={styles.dataTableHeaderCell}>Repuesto</Text>
+            <Text style={styles.dataTableHeaderCell}>Cantidad</Text>
+            <Text style={styles.dataTableHeaderCell}>Observación</Text>
+          </View>
+          {data?.repuestos && data.repuestos.length > 0 ? (
+            data.repuestos.slice(0, 10).map((rep, index) => (
+              <View key={index} style={styles.dataTableRow}>
+                <Text style={styles.dataTableCell}>{formatDate(rep.fecha)}</Text>
+                <Text style={styles.dataTableCell}>{safeValue(rep.repuesto_name)}</Text>
+                <Text style={styles.dataTableCell}>{safeValue(rep.cantidad_entregada)}</Text>
+                <Text style={styles.dataTableCell}>
+                  {rep.observacion
+                    ? (rep.observacion.length > 80
+                        ? rep.observacion.substring(0, 80) + '...'
+                        : rep.observacion)
+                    : 'N/A'}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.dataTableRow}>
+              <Text style={[styles.dataTableCell, { textAlign: 'center', fontStyle: 'italic', color: '#6b7280' }]}>
+                No hay repuestos instalados registrados
               </Text>
             </View>
           )}

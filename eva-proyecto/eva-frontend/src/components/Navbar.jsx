@@ -101,7 +101,7 @@ const Header = () => {
           <DropdownMenuContent
             align="end"
             sideOffset={8}
-            className="w-60 rounded-2xl border-slate-100 shadow-xl p-1.5 origin-top-right duration-200 ease-out data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1"
+            className="w-60 rounded-2xl border-slate-100 shadow-xl p-1.5 origin-top-right"
           >
             {/* Cabecera: el menú se siente una extensión del bloque de usuario */}
             <div className="flex items-center gap-2.5 px-2.5 py-2">

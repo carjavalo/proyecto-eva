@@ -13,7 +13,7 @@ export function StatsActionButtons({
   onParadaEquipoClick,
   equipmentType = "biomedical", // "biomedical" | "industrial"
 }) {
-  const { canEdit, user } = useAuth();
+  const { canEdit } = useAuth();
   const moduleName = equipmentType === "industrial" ? "equipos industriales" : "equipos";
   const getLabels = () => {
     switch (equipmentType) {
@@ -50,7 +50,6 @@ export function StatsActionButtons({
   const labels = getLabels();
   
   // Validar si es Usuario Básico (rol_id === 4)
-  const isBasicUser = user && parseInt(user.rol_id) === 4;
 
   return (
     <Card className="bg-slate-800 border-slate-700 shadow-none flex-1">
@@ -59,11 +58,8 @@ export function StatsActionButtons({
           <Button
             onClick={onPreventiveClick}
             variant="ghost"
-            size="sm"
-            disabled={isBasicUser}
-            className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-              isBasicUser ? "opacity-50 cursor-not-allowed hidden" : ""
-            }`}
+            size="sm"
+            className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0`}
           >
             <span className="mr-0.5 xs:mr-1 text-xs xs:text-sm sm:text-base">
               {labels.icons.preventive}
@@ -76,11 +72,8 @@ export function StatsActionButtons({
           <Button
             onClick={onCalibrationClick}
             variant="ghost"
-            size="sm"
-            disabled={isBasicUser}
-            className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-              isBasicUser ? "opacity-50 cursor-not-allowed hidden" : ""
-            }`}
+            size="sm"
+            className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0`}
           >
             <span className="mr-0.5 xs:mr-1 text-xs xs:text-sm sm:text-base">
               {labels.icons.calibration}
@@ -93,11 +86,8 @@ export function StatsActionButtons({
           <Button
             onClick={onCorrectiveClick}
             variant="ghost"
-            size="sm"
-            disabled={isBasicUser}
-            className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-              isBasicUser ? "opacity-50 cursor-not-allowed hidden" : ""
-            }`}
+            size="sm"
+            className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0`}
           >
             <span className="mr-0.5 xs:mr-1 text-xs xs:text-sm sm:text-base">
               {labels.icons.corrective}
@@ -112,9 +102,9 @@ export function StatsActionButtons({
               onClick={onParadaEquipoClick}
               variant="ghost"
               size="sm"
-              disabled={!canEdit(moduleName) || isBasicUser}
+              disabled={!canEdit(moduleName)}
               className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-                (!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+                !canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
               }`}
               title={`Exportar Parada de Equipo ${equipmentType === 'industrial' ? 'Industrial' : 'Biomédico'}`}
             >

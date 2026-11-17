@@ -39,12 +39,12 @@ export function MainActionButtons({
   };
 
   const labels = getLabels();
-  const { canCreate, canEdit, canDelete, user } = useAuth();
+  const { canCreate, canEdit } = useAuth();
   
   const moduleName = equipmentType === "industrial" ? "equipos industriales" : "equipos";
   
-  // Validar si es Usuario Básico (rol_id === 4)
-  const isBasicUser = user && parseInt(user.rol_id) === 4;
+  // El acceso lo decide el permiso del módulo, no el rol: antes un rol 4 tenía los
+  // botones ocultos aunque se le hubiera marcado "editar" sobre este módulo.
 
   return (
     <Card className="bg-slate-800 border-slate-700 shadow-none flex-1">
@@ -53,11 +53,10 @@ export function MainActionButtons({
           <Button
             onClick={onFilterClick}
             variant="ghost"
-            size="sm"
-            disabled={isBasicUser}
+            size="sm"
             className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 relative ${
               activeFiltersCount > 0 ? "bg-teal-600 hover:bg-teal-700" : ""
-            } ${isBasicUser ? "opacity-50 cursor-not-allowed hidden" : ""}`}
+            }`}
           >
             <Filter className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 mr-0.5 xs:mr-1 flex-shrink-0" />
             <span className="truncate">{labels.filter}</span>
@@ -76,11 +75,8 @@ export function MainActionButtons({
             <Button
               onClick={onClearFiltersClick}
               variant="ghost"
-              size="sm"
-              disabled={isBasicUser}
-              className={`text-white hover:bg-red-600 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-                isBasicUser ? "opacity-50 cursor-not-allowed hidden" : ""
-              }`}
+              size="sm"
+              className={`text-white hover:bg-red-600 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0`}
             >
               <X className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 mr-0.5 xs:mr-1 flex-shrink-0" />
               <span className="truncate">Limpiar</span>
@@ -91,9 +87,9 @@ export function MainActionButtons({
             onClick={onAddClick}
             variant="ghost"
             size="sm"
-            disabled={!canCreate(moduleName) || isBasicUser}
+            disabled={!canCreate(moduleName)}
             className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-              (!canCreate(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+              !canCreate(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
             }`}
           >
             <Plus className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 mr-0.5 xs:mr-1 flex-shrink-0" />
@@ -104,9 +100,9 @@ export function MainActionButtons({
             onClick={onCleanNamesClick}
             variant="ghost"
             size="sm"
-            disabled={!canEdit(moduleName) || isBasicUser}
+            disabled={!canEdit(moduleName)}
             className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-              (!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+              !canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
             }`}
           >
             <FileSpreadsheet className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 mr-0.5 xs:mr-1 flex-shrink-0" />
@@ -117,9 +113,9 @@ export function MainActionButtons({
             onClick={onExportClick}
             variant="ghost"
             size="sm"
-            disabled={!canEdit(moduleName) || isBasicUser}
+            disabled={!canEdit(moduleName)}
             className={`text-white hover:bg-slate-700 hover:text-white text-[10px] xs:text-xs sm:text-sm h-6 xs:h-7 sm:h-8 md:h-9 px-1 xs:px-1.5 sm:px-2 md:px-3 flex-1 min-w-0 ${
-              (!canEdit(moduleName) || isBasicUser) ? 'opacity-50 cursor-not-allowed hidden' : ''
+              !canEdit(moduleName) ? 'opacity-50 cursor-not-allowed hidden' : ''
             }`}
           >
             <Download className="w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 mr-0.5 xs:mr-1 flex-shrink-0" />
