@@ -19,6 +19,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RoundedPieChart } from "./ui/rounded-pie-chart";
 import httpService from "@/services/httpService";
+import PanelCriticidad from "./dashboard/PanelCriticidad";
 import { ExportTicketsModal } from "@/components/modals/export-tickets-modal";
 
 // Tipografías del nuevo inicio (ver HomePage). Login.css fija una fuente global en
@@ -1396,6 +1397,7 @@ export default function DashboardUnificado() {
       return (
         <>
           {sinDatos || renderResumen()}
+          <PanelCriticidad consulta={consulta} />
           {renderExportar()}
         </>
       );

@@ -63,7 +63,9 @@ class Servicio extends Model
         'status',
         'zona_id',
         'centro_id',
-        'sede_id'
+        'sede_id',
+        'grupo_habilitacion',
+        'criticidad'
     ];
 
     /**

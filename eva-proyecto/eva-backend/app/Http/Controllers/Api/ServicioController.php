@@ -9,6 +9,7 @@ use App\Models\Servicio;
 use App\Models\Area;
 use App\Models\Equipo;
 use App\Models\Usuario;
+use App\Support\GruposHabilitacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -98,6 +99,8 @@ class ServicioController extends ApiController
                     'id'             => $s->id,
                     'code'           => $s->code,
                     'name'           => $s->name,
+                    'grupo_habilitacion' => $s->grupo_habilitacion ?? null,
+                    'criticidad'     => $s->criticidad ?? null,
                     'description'    => $s->description,
                     'is_active'      => (int)$s->is_active,
                     'status'         => (int)$s->status,
@@ -151,6 +154,7 @@ class ServicioController extends ApiController
                     'zonas'   => DB::table('zonas')->select('id', 'name')->orderBy('name')->get(),
                     'pisos'   => DB::table('pisos')->select('id', 'name')->orderBy('name')->get(),
                     'centros' => DB::table('centros')->select('id', 'code', 'name')->where('status', 1)->orderBy('name')->get(),
+                    'grupos_habilitacion' => GruposHabilitacion::catalogo(),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -183,7 +187,10 @@ class ServicioController extends ApiController
             'centro_id'    => 'nullable|exists:centros,id',
             'sede_id'      => 'nullable|exists:sedes,id',
             'is_active'    => 'nullable|boolean',
-            'status'       => 'nullable|integer'
+            'status'       => 'nullable|integer',
+            // El grupo de habilitación decide el nivel de criticidad del servicio,
+            // y con él el plazo de primera respuesta de sus tickets.
+            'grupo_habilitacion' => 'nullable|string|in:' . implode(',', GruposHabilitacion::nombres()),
         ]);
 
         if ($validator->fails()) {
@@ -196,9 +203,15 @@ class ServicioController extends ApiController
 
         try {
             $data = $request->only([
-                'name', 'code', 'description', 'piso_id', 'zona_id', 
-                'centro_id', 'sede_id', 'is_active', 'status'
+                'name', 'code', 'description', 'piso_id', 'zona_id',
+                'centro_id', 'sede_id', 'is_active', 'status', 'grupo_habilitacion'
             ]);
+
+            // La criticidad no se pide al usuario: se deduce del grupo, para que un
+            // servicio nuevo no nazca en nivel 4 por descuido. Sin grupo queda en 4.
+            if (array_key_exists('grupo_habilitacion', $data)) {
+                $data['criticidad'] = GruposHabilitacion::nivelDe($data['grupo_habilitacion']);
+            }
             
             // Mapeo de campos antiguos si vienen del frontend
             if ($request->has('activo')) $data['is_active'] = $request->activo;
@@ -305,7 +318,10 @@ class ServicioController extends ApiController
             'centro_id'    => 'nullable|exists:centros,id',
             'sede_id'      => 'nullable|exists:sedes,id',
             'is_active'    => 'nullable|boolean',
-            'status'       => 'nullable|integer'
+            'status'       => 'nullable|integer',
+            // El grupo de habilitación decide el nivel de criticidad del servicio,
+            // y con él el plazo de primera respuesta de sus tickets.
+            'grupo_habilitacion' => 'nullable|string|in:' . implode(',', GruposHabilitacion::nombres()),
         ]);
 
         if ($validator->fails()) {
@@ -320,9 +336,15 @@ class ServicioController extends ApiController
             $servicio = Servicio::findOrFail($id);
             
             $data = $request->only([
-                'name', 'code', 'description', 'piso_id', 'zona_id', 
-                'centro_id', 'sede_id', 'is_active', 'status'
+                'name', 'code', 'description', 'piso_id', 'zona_id',
+                'centro_id', 'sede_id', 'is_active', 'status', 'grupo_habilitacion'
             ]);
+
+            // La criticidad no se pide al usuario: se deduce del grupo, para que un
+            // servicio nuevo no nazca en nivel 4 por descuido. Sin grupo queda en 4.
+            if (array_key_exists('grupo_habilitacion', $data)) {
+                $data['criticidad'] = GruposHabilitacion::nivelDe($data['grupo_habilitacion']);
+            }
 
             // Mapeo de campos antiguos si vienen del frontend
             if ($request->has('activo')) $data['is_active'] = $request->activo;

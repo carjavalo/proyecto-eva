@@ -3877,7 +3877,15 @@ Route::post('v1/crear-ticket', function (Request $request) {
         }
         
         \Log::info('🎫 [CREAR-TICKET] Todos los campos obligatorios validados. Insertando...');
-        
+
+        // Prioridad por criticidad del servicio (matriz de criticidad).
+        // Se sella aqui, al crear, y no se recalcula despues: si manana cambia el nivel del
+        // servicio, los tickets viejos conservan el plazo con el que nacieron.
+        // Un ticket sin servicio queda en NULL, igual que los anteriores al sistema: sin plazo.
+        $ticketData['criticidad'] = DB::table('servicios')
+            ->where('id', $ticketData['servicio_id'])
+            ->value('criticidad');
+
         // Insertar el ticket en la base de datos
         $ticketId = DB::table('ordenes')->insertGetId($ticketData);
         
@@ -5943,6 +5951,13 @@ Route::get('v1/gestion-tickets', function(Request $request) {
                 'ordenes.fecha_inicio',
                 'ordenes.fecha_fin',
                 'ordenes.estado_id',
+                // Nivel de la matriz de criticidad, sellado al crear el ticket.
+                // NULL en los anteriores al sistema de prioridad: esos no llevan plazo.
+                'ordenes.criticidad',
+                // Grupo de habilitacion del servicio: es el porque del nivel.
+                'servicios.grupo_habilitacion as servicio_grupo',
+                // Momento de la primera respuesta: el reloj se detiene aqui.
+                DB::raw('COALESCE(ordenes.fecha_asignacion, ordenes.fecha_diagnostico) AS fecha_primera_respuesta'),
                 'ordenes.reportante_id',
                 'ordenes.asignado_id',
                 'ordenes.equipo_id',
@@ -15417,6 +15432,11 @@ Route::post('/planes-mantenimientos/enviar-alertas-criticas', function (Request 
                     'ordenes.fecha_inicio',
                     'ordenes.estado_id',
                     'ordenes.prioridad',
+                    // Nivel de la matriz de criticidad, sellado al crear el ticket.
+                    // NULL en los anteriores al sistema de prioridad: esos no llevan plazo.
+                    'ordenes.criticidad',
+                    // Momento de la primera respuesta: el reloj se detiene aqui.
+                    DB::raw('COALESCE(ordenes.fecha_asignacion, ordenes.fecha_diagnostico) AS fecha_primera_respuesta'),
                     'ordenes.nombre_equipo',
                     'ordenes.codigo_equipo', 
                     'ordenes.serie_equipo',
@@ -16549,6 +16569,120 @@ Route::get('v1/inicio/resumen', function (Request $request) {
 // lineas = CSV de ordenes.subproceso_id (1 Biomédico, 2 Industrial, 3 Infraestructura).
 // Solo administradores (rol 1 y 2); muestra todas las líneas sin importar la empresa del usuario.
 // Sede efectiva en todas las consultas: COALESCE(equipos.sede_id, servicios.sede_id).
+/**
+ * Cumplimiento del plazo de PRIMERA RESPUESTA segun la matriz de criticidad.
+ *
+ * Solo entran los tickets que nacieron con nivel (ordenes.criticidad no nulo); los
+ * anteriores a la puesta en marcha no llevan plazo y quedan fuera de toda cifra.
+ * El tiempo se cuenta corrido, fines de semana incluidos.
+ *
+ * Parametros: anio (por defecto el actual) o desde + hasta.
+ */
+Route::get('v1/dashboard/criticidad', function (Request $request) {
+    try {
+        // Plazo de primera respuesta en minutos, por nivel.
+        $plazo = "CASE o.criticidad WHEN 1 THEN 10 WHEN 2 THEN 60 WHEN 3 THEN 480 ELSE 1440 END";
+        // Minutos que tardo la primera respuesta (null si sigue abierto o no hay marca).
+        $tardo = "TIMESTAMPDIFF(MINUTE, o.fecha_inicio, COALESCE(o.fecha_asignacion, o.fecha_diagnostico))";
+
+        if ($request->filled('desde') && $request->filled('hasta')) {
+            $desde = $request->input('desde');
+            $hasta = $request->input('hasta');
+        } else {
+            $anio = (int) ($request->input('anio') ?: date('Y'));
+            $desde = sprintf('%04d-01-01 00:00:00', $anio);
+            $hasta = sprintf('%04d-12-31 23:59:59', $anio);
+        }
+
+        $base = fn () => DB::table('ordenes as o')
+            ->whereNotNull('o.criticidad')
+            ->whereBetween('o.fecha_inicio', [$desde, $hasta]);
+
+        // ── 1. Promedio de primera respuesta por nivel ──────────────────────
+        $porNivel = $base()
+            ->whereRaw("$tardo IS NOT NULL")
+            ->selectRaw("o.criticidad AS nivel,
+                         COUNT(*) AS atendidos,
+                         ROUND(AVG($tardo)) AS promedio_min,
+                         ROUND(MIN($tardo)) AS minimo_min,
+                         ROUND(MAX($tardo)) AS maximo_min,
+                         SUM(CASE WHEN $tardo <= $plazo THEN 1 ELSE 0 END) AS en_plazo")
+            ->groupBy('o.criticidad')
+            ->orderBy('o.criticidad')
+            ->get()
+            ->map(fn ($r) => [
+                'nivel' => (int) $r->nivel,
+                'atendidos' => (int) $r->atendidos,
+                'promedio_min' => (int) $r->promedio_min,
+                'minimo_min' => (int) $r->minimo_min,
+                'maximo_min' => (int) $r->maximo_min,
+                'en_plazo' => (int) $r->en_plazo,
+                'cumplimiento' => $r->atendidos ? round(100 * $r->en_plazo / $r->atendidos, 1) : null,
+            ]);
+
+        // ── 2. Cumplimiento por linea (subproceso) ──────────────────────────
+        $porLinea = $base()
+            ->leftJoin('subprocesos as sp', 'o.subproceso_id', '=', 'sp.id')
+            ->whereRaw("$tardo IS NOT NULL")
+            ->selectRaw("o.subproceso_id,
+                         sp.nombre AS linea,
+                         COUNT(*) AS atendidos,
+                         ROUND(AVG($tardo)) AS promedio_min,
+                         SUM(CASE WHEN $tardo <= $plazo THEN 1 ELSE 0 END) AS en_plazo")
+            ->groupBy('o.subproceso_id', 'sp.nombre')
+            ->orderBy('o.subproceso_id')
+            ->get()
+            ->map(fn ($r) => [
+                'subproceso_id' => (int) $r->subproceso_id,
+                'linea' => $r->linea ?: 'Sin línea',
+                'atendidos' => (int) $r->atendidos,
+                'promedio_min' => (int) $r->promedio_min,
+                'en_plazo' => (int) $r->en_plazo,
+                'cumplimiento' => $r->atendidos ? round(100 * $r->en_plazo / $r->atendidos, 1) : null,
+            ]);
+
+        // ── 3. Vencidos ahora mismo, por nivel ──────────────────────────────
+        // Sin filtro de fecha: lo que esta vencido hoy importa aunque se creara antes.
+        $vencidos = DB::table('ordenes as o')
+            ->whereNotNull('o.criticidad')
+            ->where('o.estado_id', 1)
+            ->whereRaw("TIMESTAMPDIFF(MINUTE, o.fecha_inicio, NOW()) > $plazo")
+            ->selectRaw("o.criticidad AS nivel,
+                         COUNT(*) AS vencidos,
+                         ROUND(AVG(TIMESTAMPDIFF(MINUTE, o.fecha_inicio, NOW()) - ($plazo))) AS retraso_medio_min")
+            ->groupBy('o.criticidad')
+            ->orderBy('o.criticidad')
+            ->get()
+            ->map(fn ($r) => [
+                'nivel' => (int) $r->nivel,
+                'vencidos' => (int) $r->vencidos,
+                'retraso_medio_min' => (int) $r->retraso_medio_min,
+            ]);
+
+        $abiertosConPlazo = DB::table('ordenes')
+            ->whereNotNull('criticidad')->where('estado_id', 1)->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'periodo' => ['desde' => $desde, 'hasta' => $hasta],
+                'plazos_min' => [1 => 10, 2 => 60, 3 => 480, 4 => 1440],
+                'promedio_por_nivel' => $porNivel,
+                'cumplimiento_por_linea' => $porLinea,
+                'vencidos_ahora' => $vencidos,
+                'abiertos_con_plazo' => $abiertosConPlazo,
+            ],
+        ]);
+    } catch (\Throwable $e) {
+        \Log::error('Error en v1/dashboard/criticidad: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Error calculando el cumplimiento de criticidad: ' . $e->getMessage(),
+        ], 500);
+    }
+});
+
+
 Route::get('v1/dashboard/resumen', function (Request $request) {
     try {
         $authUser = auth('sanctum')->user();

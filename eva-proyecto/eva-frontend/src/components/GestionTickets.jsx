@@ -40,6 +40,7 @@ import { TicketsTableSkeleton } from "@/components/skeletons/TicketsTableSkeleto
 import httpService from "@/services/httpService";
 import { useSedes } from "@/hooks/useRoles";
 import { useAuth } from "@/hooks/useAuth";
+import { InsigniaPrioridad, RelojRespuesta } from "./tickets/PrioridadTicket";
 import { sanitizeRichHtml } from "@/utils/sanitizeRichText";
 // import EquiposModal from "@/components/modals/EquiposModal";
 // import PersonalModal from "@/components/modals/PersonalModal";
@@ -82,6 +83,14 @@ export default function GestionTickets() {
   const [reportanteFilter, setReportanteFilter] = useState("all");
 
   // Estados para ordenamiento
+  // Instante compartido por todas las filas, para que el reloj de primera respuesta
+  // avance a la vez en toda la tabla en lugar de un temporizador por fila.
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
   const [sortField, setSortField] = useState("id");
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -665,6 +674,7 @@ export default function GestionTickets() {
                       )}
                     </div>
                   </th>
+                  <th className="w-28 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridad</th>
                   <th
                     className="w-64 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('descripcion')}
@@ -705,6 +715,7 @@ export default function GestionTickets() {
                       )}
                     </div>
                   </th>
+                  <th className="w-36 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">1.ª respuesta</th>
                   <th className="w-24 px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
@@ -717,6 +728,9 @@ export default function GestionTickets() {
                         <div className="text-xs text-blue-600 font-medium truncate">{ticket.origen}</div>
                         <div className="text-xs text-blue-600 font-bold">{new Date(ticket.fecha_inicio).toLocaleDateString('es-CO')}</div>
                       </div>
+                    </td>
+                    <td className="px-2 py-3 align-top">
+                      <InsigniaPrioridad nivel={ticket.criticidad} grupo={ticket.servicio_grupo} />
                     </td>
                     <td className="px-3 py-4 align-top">
                       <div className="space-y-2">
@@ -787,6 +801,9 @@ export default function GestionTickets() {
                         </div>
                         <div className="ml-4 font-bold text-blue-600">{new Date(ticket.created_at || ticket.fecha_inicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
+                    </td>
+                    <td className="px-2 py-3 align-top">
+                      <RelojRespuesta ticket={ticket} ahora={ahora} />
                     </td>
                     <td className="px-2 py-3">
                       <div className="flex items-center justify-center">
